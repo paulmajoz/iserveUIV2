@@ -202,7 +202,9 @@ export class EventDetailComponent implements OnInit {
     pagination: true,
     paginationPageSize: 25,
     rowHeight: 48,
-    enableRangeSelection: true,
+    rowGroupPanelShow: 'never',
+    pivotPanelShow:    'never',
+    suppressRowClickSelection: true,
   };
 
   constructor(

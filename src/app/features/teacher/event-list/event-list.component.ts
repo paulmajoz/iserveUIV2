@@ -149,8 +149,9 @@ export class EventListComponent implements OnInit {
     pagination: true,
     paginationPageSize: 20,
     rowHeight: 48,
-    suppressRowClickSelection: false,
-    enableRangeSelection: true,
+    rowGroupPanelShow: 'never',
+    pivotPanelShow:    'never',
+    suppressRowClickSelection: true,
   };
 
   constructor(

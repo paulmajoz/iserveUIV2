@@ -47,5 +47,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/student/submit/submit.component').then(m => m.SubmitComponent),
   },
+  {
+    path: 'nav',
+    loadComponent: () =>
+      import('./features/dev/dev-nav.component').then(m => m.DevNavComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

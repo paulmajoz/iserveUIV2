@@ -202,6 +202,8 @@ export class DashboardComponent implements OnInit {
     pagination: true,
     paginationPageSize: 15,
     rowHeight: 44,
+    rowGroupPanelShow: 'never',
+    pivotPanelShow:    'never',
   };
 
   constructor(
