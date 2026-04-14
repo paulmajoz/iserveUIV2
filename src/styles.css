@@ -110,13 +110,96 @@ body {
   min-height: 64px;
 }
 
-/* ── Material form field overrides ── */
+/* ── Material form field overrides (used where mat-form-field is still needed) ── */
 .mat-mdc-form-field {
   width: 100%;
 }
-
 .mat-mdc-form-field .mat-mdc-text-field-wrapper {
   border-radius: 8px !important;
+}
+
+/* ─────────────────────────────────────────────
+   Native form field utilities  (old-style forms)
+   label → .field-label
+   input / select / textarea → .field-input
+   error paragraph → .field-error
+   section heading → .form-section-label
+   ───────────────────────────────────────────── */
+
+.form-section-label {
+  @apply block text-xs font-semibold uppercase tracking-wider mb-3;
+  color: var(--color-secondary);
+}
+
+.field-label {
+  @apply block text-sm font-medium text-gray-700 mb-1.5;
+}
+
+.field-input {
+  @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900
+         transition-colors duration-150;
+  outline: none;
+}
+.field-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+.field-input.ng-invalid.ng-touched {
+  @apply border-red-400;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.25);
+}
+/* native select gets a custom chevron */
+select.field-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3E%3Cpath d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+textarea.field-input {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.field-error {
+  @apply mt-1 text-xs text-red-600;
+}
+
+.field-hint {
+  @apply mt-1 text-xs text-gray-400;
+}
+
+/* CSS toggle button (used in forms instead of mat-slide-toggle) */
+.toggle-track {
+  @apply relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 cursor-pointer;
+  background-color: #d1d5db;
+}
+.toggle-track.on {
+  background-color: var(--color-primary);
+}
+.toggle-thumb {
+  @apply absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200;
+  left: 2px;
+}
+.toggle-track.on .toggle-thumb {
+  left: 22px;
+}
+
+/* Segmented control (QR mode / hour mode) */
+.seg-control {
+  @apply flex rounded-xl overflow-hidden border border-gray-200 text-sm font-semibold;
+}
+.seg-btn {
+  @apply flex-1 py-2.5 text-center transition-colors duration-150 text-gray-500 bg-white;
+}
+.seg-btn + .seg-btn {
+  @apply border-l border-gray-200;
+}
+.seg-btn.active {
+  color: white;
+  background-color: var(--color-primary);
 }
 
 /* Error banner */

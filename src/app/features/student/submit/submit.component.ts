@@ -2,8 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -21,8 +19,6 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -30,8 +26,8 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
   template: `
     <div class="min-h-screen flex flex-col" style="background-color: var(--color-background)">
 
-      <!-- Header -->
-      <div class="page-header text-center py-5">
+      <!-- ── Header bar ───────────────────────────── -->
+      <div class="page-header text-center py-5 px-4">
         <p class="text-xs font-medium uppercase tracking-widest opacity-70 mb-1">iServe</p>
         <h1 class="text-xl font-bold">{{ schoolName || 'Loading...' }}</h1>
         <p *ngIf="event" class="text-sm opacity-80 mt-0.5">{{ event.eventName }}</p>
@@ -40,27 +36,32 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
       <main class="flex-1 flex items-start justify-center p-4 pt-8">
         <div class="w-full max-w-sm space-y-4">
 
-          <!-- ── Loading ── -->
+          <!-- ── Loading ─────────────────────────── -->
           <div *ngIf="state === 'loading'" class="flex flex-col items-center gap-4 py-12">
             <mat-spinner diameter="48"></mat-spinner>
             <p class="text-gray-500 text-sm">Loading event details...</p>
           </div>
 
-          <!-- ── Not found / generic error ── -->
-          <div *ngIf="state === 'error'" class="card text-center space-y-4">
+          <!-- ── Error ────────────────────────────── -->
+          <div *ngIf="state === 'error'"
+               class="bg-white rounded-2xl shadow-sm p-6 text-center space-y-4">
             <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
               <mat-icon class="text-red-400 !text-3xl">link_off</mat-icon>
             </div>
             <h2 class="text-lg font-bold text-gray-800">Event Not Found</h2>
-            <p class="text-gray-500 text-sm">This QR code may be invalid or the event may have ended.</p>
-            <p *ngIf="loadError" class="text-xs text-red-400 bg-red-50 rounded-lg p-3">{{ loadError }}</p>
+            <p class="text-gray-500 text-sm">
+              This QR code may be invalid or the event may have ended.
+            </p>
+            <p *ngIf="loadError" class="text-xs text-red-500 bg-red-50 rounded-lg p-3 text-left">
+              {{ loadError }}
+            </p>
           </div>
 
-          <!-- ── Sign In ── -->
+          <!-- ── Sign In ───────────────────────────── -->
           <ng-container *ngIf="state === 'confirm-in'">
 
-            <!-- Student info card -->
-            <div class="card flex items-center gap-4">
+            <!-- Student identity -->
+            <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
               <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
                    style="background-color: var(--color-primary)">
                 {{ initials }}
@@ -68,17 +69,17 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <div class="min-w-0">
                 <p class="font-semibold text-gray-800 truncate">{{ displayName }}</p>
                 <p class="text-xs text-gray-500 truncate">{{ studentEmail }}</p>
-                <p *ngIf="studentGrade" class="text-xs text-gray-400">Grade {{ studentGrade }}
-                  <span *ngIf="studentClass"> · {{ studentClass }}</span>
+                <p *ngIf="studentGrade" class="text-xs text-gray-400">
+                  Grade {{ studentGrade }}<span *ngIf="studentClass"> · {{ studentClass }}</span>
                 </p>
               </div>
             </div>
 
-            <!-- Event details -->
-            <div class="card space-y-2 text-sm">
+            <!-- Event summary -->
+            <div class="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-gray-500">Event</span>
-                <span class="font-medium text-gray-800">{{ event?.eventName }}</span>
+                <span class="font-medium text-gray-800 text-right ml-4">{{ event?.eventName }}</span>
               </div>
               <div *ngIf="event?.pointsEnabled" class="flex justify-between">
                 <span class="text-gray-500">Points on sign-in</span>
@@ -90,47 +91,57 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
                 <span class="text-gray-500">Hours awarded</span>
                 <span class="font-medium text-gray-800">{{ event?.fixedHours }}h</span>
               </div>
+              <div class="flex justify-between text-green-600">
+                <span>Signing <strong>in</strong></span>
+                <mat-icon class="text-base">login</mat-icon>
+              </div>
             </div>
 
-            <!-- Optional fields form -->
-            <form [formGroup]="optionalForm" class="space-y-4"
-                  *ngIf="event?.captureOptions?.hasDescription || event?.captureOptions?.hasReflection || event?.hourMode === 'volume'">
-              <div class="card space-y-4">
-                <p class="section-heading">Additional Information</p>
+            <!-- Optional fields -->
+            <ng-container
+              *ngIf="event?.captureOptions?.hasDescription || event?.captureOptions?.hasReflection || event?.hourMode === 'volume'">
+              <form [formGroup]="optionalForm" class="bg-white rounded-2xl shadow-sm p-5 space-y-4" novalidate>
+                <p class="form-section-label">Additional Information</p>
 
-                <mat-form-field *ngIf="event?.captureOptions?.hasDescription" appearance="outline">
-                  <mat-label>Description</mat-label>
-                  <textarea matInput formControlName="description" rows="3"
-                            placeholder="Describe your contribution..."></textarea>
-                  <mat-hint>Tell us what you did</mat-hint>
-                  <mat-error *ngIf="optionalForm.get('description')?.hasError('required')">
-                    A description is required for this event
-                  </mat-error>
-                </mat-form-field>
+                <div *ngIf="event?.captureOptions?.hasDescription">
+                  <label class="field-label">
+                    Description <span class="text-red-500">*</span>
+                  </label>
+                  <textarea formControlName="description" rows="3"
+                            placeholder="Describe your contribution..."
+                            class="field-input"></textarea>
+                  <p *ngIf="optionalForm.get('description')?.invalid && optionalForm.get('description')?.touched"
+                     class="field-error">A description is required for this event.</p>
+                  <p class="field-hint">Tell us what you did</p>
+                </div>
 
-                <mat-form-field *ngIf="event?.captureOptions?.hasReflection" appearance="outline">
-                  <mat-label>Reflection</mat-label>
-                  <textarea matInput formControlName="reflection" rows="3"
-                            placeholder="Reflect on your experience..."></textarea>
-                  <mat-hint>What did you learn or feel?</mat-hint>
-                  <mat-error *ngIf="optionalForm.get('reflection')?.hasError('required')">
-                    A reflection is required for this event
-                  </mat-error>
-                </mat-form-field>
+                <div *ngIf="event?.captureOptions?.hasReflection">
+                  <label class="field-label">
+                    Reflection <span class="text-red-500">*</span>
+                  </label>
+                  <textarea formControlName="reflection" rows="3"
+                            placeholder="Reflect on your experience..."
+                            class="field-input"></textarea>
+                  <p *ngIf="optionalForm.get('reflection')?.invalid && optionalForm.get('reflection')?.touched"
+                     class="field-error">A reflection is required for this event.</p>
+                  <p class="field-hint">What did you learn or feel?</p>
+                </div>
 
-                <mat-form-field *ngIf="event?.hourMode === 'volume'" appearance="outline">
-                  <mat-label>{{ event?.volumeUnitName || 'Units' }}</mat-label>
-                  <input matInput type="number" formControlName="unitAmount" min="0" step="1" />
-                  <mat-hint>Enter the number of {{ event?.volumeUnitName || 'units' }}</mat-hint>
-                  <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('required')">
-                    Please enter an amount
-                  </mat-error>
-                  <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('min')">
-                    Must be 0 or more
-                  </mat-error>
-                </mat-form-field>
-              </div>
-            </form>
+                <div *ngIf="event?.hourMode === 'volume'">
+                  <label class="field-label">
+                    {{ event?.volumeUnitName || 'Units' }} <span class="text-red-500">*</span>
+                  </label>
+                  <input type="number" formControlName="unitAmount" min="0" step="1"
+                         [placeholder]="'Enter number of ' + (event?.volumeUnitName || 'units')"
+                         class="field-input" />
+                  <p *ngIf="optionalForm.get('unitAmount')?.invalid && optionalForm.get('unitAmount')?.touched"
+                     class="field-error">
+                    <ng-container *ngIf="optionalForm.get('unitAmount')?.hasError('required')">Please enter an amount.</ng-container>
+                    <ng-container *ngIf="optionalForm.get('unitAmount')?.hasError('min')">Must be 0 or more.</ng-container>
+                  </p>
+                </div>
+              </form>
+            </ng-container>
 
             <!-- Submission error -->
             <div *ngIf="submitError" class="error-banner">
@@ -138,13 +149,10 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <p>{{ submitError }}</p>
             </div>
 
-            <!-- Sign In button -->
-            <button
-              mat-raised-button
-              (click)="confirmIn()"
-              [disabled]="submitting || optionalForm.invalid"
-              class="w-full !py-4 !text-base !font-semibold"
-              style="background-color: var(--color-primary); color: white;">
+            <button mat-raised-button (click)="confirmIn()"
+                    [disabled]="submitting || optionalForm.invalid"
+                    class="w-full !py-4 !text-base !font-semibold"
+                    style="background-color: var(--color-primary); color: white;">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
                 <mat-icon *ngIf="!submitting">how_to_reg</mat-icon>
@@ -154,29 +162,32 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
 
           </ng-container>
 
-          <!-- ── Sign Out ── -->
+          <!-- ── Sign Out ──────────────────────────── -->
           <ng-container *ngIf="state === 'confirm-out'">
 
-            <div class="card flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-                <mat-icon class="text-red-400">logout</mat-icon>
+            <!-- Student identity -->
+            <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
+                   style="background-color: var(--color-primary)">
+                {{ initials }}
               </div>
-              <div>
-                <p class="font-semibold text-gray-800">{{ displayName }}</p>
+              <div class="min-w-0">
+                <p class="font-semibold text-gray-800 truncate">{{ displayName }}</p>
                 <p *ngIf="signedInAt" class="text-xs text-gray-500">
                   Signed in at {{ signedInAt | date:'shortTime' }}
                 </p>
               </div>
             </div>
 
-            <div class="card text-sm space-y-2">
+            <!-- Event summary -->
+            <div class="bg-white rounded-2xl shadow-sm p-4 space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-gray-500">Event</span>
-                <span class="font-medium text-gray-800">{{ event?.eventName }}</span>
+                <span class="font-medium text-gray-800 text-right ml-4">{{ event?.eventName }}</span>
               </div>
               <div class="flex justify-between text-orange-600">
-                <span>You are signing <strong>out</strong></span>
-                <mat-icon class="text-base">arrow_outward</mat-icon>
+                <span>Signing <strong>out</strong></span>
+                <mat-icon class="text-base">logout</mat-icon>
               </div>
             </div>
 
@@ -186,56 +197,47 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <p>{{ submitError }}</p>
             </div>
 
-            <button
-              mat-raised-button
-              (click)="confirmOut()"
-              [disabled]="submitting"
-              class="w-full !py-4 !text-base !font-semibold !bg-red-500 !text-white">
+            <button mat-raised-button (click)="confirmOut()"
+                    [disabled]="submitting"
+                    class="w-full !py-4 !text-base !font-semibold !bg-orange-500 !text-white">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
-                <mat-icon *ngIf="!submitting">exit_to_app</mat-icon>
+                <mat-icon *ngIf="!submitting">logout</mat-icon>
                 {{ submitting ? 'Signing out...' : 'Confirm Sign Out' }}
               </span>
             </button>
 
           </ng-container>
 
-          <!-- ── Success ── -->
-          <div *ngIf="state === 'success'" class="card text-center space-y-5 py-8">
-            <div class="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto">
-              <mat-icon class="!text-5xl text-green-500">check_circle</mat-icon>
+          <!-- ── Success ───────────────────────────── -->
+          <div *ngIf="state === 'success'"
+               class="bg-white rounded-2xl shadow-sm p-8 text-center space-y-4">
+            <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto">
+              <mat-icon class="!text-3xl text-green-500">check_circle</mat-icon>
             </div>
-            <div>
-              <h2 class="text-2xl font-bold text-gray-800">
-                {{ direction === 'out' ? 'Signed Out!' : 'Signed In!' }}
-              </h2>
-              <p class="text-gray-500 text-sm mt-1">{{ event?.eventName }}</p>
-            </div>
+            <h2 class="text-xl font-bold text-gray-800">
+              {{ direction === 'out' ? 'Signed Out!' : 'Signed In!' }}
+            </h2>
+            <p class="text-gray-500 text-sm">Your attendance has been recorded.</p>
 
-            <!-- Stats -->
-            <div *ngIf="completedRecord"
-                 class="bg-gray-50 rounded-xl p-4 space-y-2 text-sm text-gray-600 text-left">
-              <div *ngIf="completedRecord.hours != null" class="flex justify-between items-center">
-                <span class="flex items-center gap-1">
-                  <mat-icon class="text-base text-gray-400">schedule</mat-icon> Hours logged
-                </span>
+            <div *ngIf="completedRecord" class="bg-gray-50 rounded-xl p-4 space-y-2 text-sm text-left">
+              <div *ngIf="completedRecord.hours" class="flex justify-between items-center">
+                <span class="text-gray-500">Hours logged</span>
                 <span class="font-semibold text-gray-800">{{ formatHours(completedRecord.hours) }}</span>
               </div>
               <div *ngIf="completedRecord.pointsAwarded > 0" class="flex justify-between items-center">
-                <span class="flex items-center gap-1">
-                  <mat-icon class="text-base text-yellow-500">stars</mat-icon> Points awarded
-                </span>
+                <span class="text-gray-500">Points awarded</span>
                 <span class="font-semibold" style="color: var(--color-primary)">
                   +{{ completedRecord.pointsAwarded }}
                 </span>
               </div>
             </div>
-
             <p class="text-xs text-gray-400">You may close this page.</p>
           </div>
 
-          <!-- ── Already recorded ── -->
-          <div *ngIf="state === 'already-recorded'" class="card text-center space-y-4 py-8">
+          <!-- ── Already Recorded ──────────────────── -->
+          <div *ngIf="state === 'already-recorded'"
+               class="bg-white rounded-2xl shadow-sm p-8 text-center space-y-4">
             <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
               <mat-icon class="!text-3xl text-blue-400">info</mat-icon>
             </div>
@@ -294,24 +296,24 @@ export class SubmitComponent implements OnInit {
     this.direction = (this.route.snapshot.queryParamMap.get('direction') ?? 'in') as 'in' | 'out';
 
     const c = this.ctx.context;
-    this.studentEmail = c?.email ?? params['email'] ?? '';
-    this.studentFirst = c?.firstName ?? params['first'] ?? '';
-    this.studentLast  = c?.lastName  ?? params['last']  ?? '';
-    this.studentGrade = c?.grade     ?? params['grade'] ?? '';
-    this.studentClass = c?.studentClass ?? params['class'] ?? '';
-    this.studentId    = c?.studentId ?? params['studentId'] ?? '';
+    this.studentEmail = c?.email        ?? params['email']   ?? '';
+    this.studentFirst = c?.firstName    ?? params['first']   ?? '';
+    this.studentLast  = c?.lastName     ?? params['last']    ?? '';
+    this.studentGrade = c?.grade        ?? params['grade']   ?? '';
+    this.studentClass = c?.studentClass ?? params['class']   ?? '';
+    this.studentId    = c?.studentId    ?? params['studentId'] ?? '';
     this.displayName  = [this.studentFirst, this.studentLast].filter(Boolean).join(' ') || this.studentEmail;
 
-    // Build the optional fields form — validators added dynamically after event loads
+    // Build optional fields form (validators added after event loads)
     this.optionalForm = this.fb.group({
       description: [''],
       reflection:  [''],
       unitAmount:  [null, [Validators.min(0)]],
     });
 
-    // Guard: validate the eventId is a proper MongoDB ObjectId before hitting the API
+    // Guard: reject non-ObjectId values before hitting the API
     if (!/^[a-f\d]{24}$/i.test(eventId)) {
-      this.loadError = `Invalid event link — the QR code may be damaged or the link is incorrect.`;
+      this.loadError = 'Invalid event link — the QR code may be damaged or the link is incorrect.';
       this.state = 'error';
       return;
     }
@@ -320,7 +322,6 @@ export class SubmitComponent implements OnInit {
       next: async (event) => {
         this.event = event;
 
-        // Apply dynamic validators based on event config
         if (event.captureOptions?.hasDescription) {
           this.optionalForm.get('description')?.setValidators(Validators.required);
         }
@@ -354,18 +355,18 @@ export class SubmitComponent implements OnInit {
 
     const v = this.optionalForm.value;
     const payload: SubmitAttendancePayload = {
-      eventId:         this.event._id,
-      studentEmail:    this.studentEmail,
-      direction:       'in',
-      studentFirstName: this.studentFirst || undefined,
-      studentLastName:  this.studentLast  || undefined,
-      studentGrade:     this.studentGrade || undefined,
-      studentClass:     this.studentClass || undefined,
-      studentId:        this.studentId    || undefined,
+      eventId:          this.event._id,
+      studentEmail:     this.studentEmail,
+      direction:        'in',
+      studentFirstName: this.studentFirst  || undefined,
+      studentLastName:  this.studentLast   || undefined,
+      studentGrade:     this.studentGrade  || undefined,
+      studentClass:     this.studentClass  || undefined,
+      studentId:        this.studentId     || undefined,
       schoolId:         String(this.ctx.schoolId),
-      description:      v.description || undefined,
-      reflection:       v.reflection  || undefined,
-      unitAmount:       v.unitAmount  ?? undefined,
+      description:      v.description      || undefined,
+      reflection:       v.reflection       || undefined,
+      unitAmount:       v.unitAmount       ?? undefined,
     };
 
     this.attendanceService.submit(payload).subscribe({
@@ -406,15 +407,14 @@ export class SubmitComponent implements OnInit {
       },
       error: (err) => {
         this.submitting = false;
-        this.submitError = err?.error?.message ?? err?.message ?? 'Sign out failed. Please try again.';
+        this.submitError = err?.error?.message ?? err?.message ?? 'Sign-out failed. Please try again.';
       },
     });
   }
 
-  formatHours(h: number | null): string {
-    if (h == null) return '—';
-    const hrs = Math.floor(h);
-    const min = Math.round((h - hrs) * 60);
-    return hrs > 0 ? `${hrs}h ${min}m` : `${min}m`;
+  formatHours(hours: number): string {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 }
