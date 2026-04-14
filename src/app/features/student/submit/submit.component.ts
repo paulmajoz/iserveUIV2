@@ -129,15 +129,20 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
 
                 <div *ngIf="event?.hourMode === 'volume'">
                   <label class="field-label">
-                    {{ event?.volumeUnitName || 'Units' }} <span class="text-red-500">*</span>
+                    How many {{ event?.volumeUnitName || 'units' }}?
+                    <span class="text-red-500">*</span>
                   </label>
                   <input type="number" formControlName="unitAmount" min="0" step="1"
-                         [placeholder]="'Enter number of ' + (event?.volumeUnitName || 'units')"
+                         [placeholder]="'e.g. 5'"
                          class="field-input" />
                   <p *ngIf="optionalForm.get('unitAmount')?.invalid && optionalForm.get('unitAmount')?.touched"
                      class="field-error">
                     <ng-container *ngIf="optionalForm.get('unitAmount')?.hasError('required')">Please enter an amount.</ng-container>
                     <ng-container *ngIf="optionalForm.get('unitAmount')?.hasError('min')">Must be 0 or more.</ng-container>
+                  </p>
+                  <!-- Conversion hint so the student knows what their units are worth -->
+                  <p class="field-hint">
+                    {{ volumeHint }}
                   </p>
                 </div>
               </form>
@@ -276,6 +281,36 @@ export class SubmitComponent implements OnInit {
   get initials(): string {
     return ((this.studentFirst[0] ?? '') + (this.studentLast[0] ?? '')).toUpperCase()
       || this.studentEmail[0]?.toUpperCase() || '?';
+  }
+
+  /** e.g. "Each bag collected = 30 min" or "Every 10 km walked = 1h" */
+  get volumeHint(): string {
+    const conv  = this.event?.volumeConversion ?? 1;
+    const unit  = this.event?.volumeUnitName   ?? 'unit';
+    const amount = this.optionalForm?.get('unitAmount')?.value;
+
+    if (conv >= 1) {
+      // 1 unit = N hours
+      const hrs = Math.round(conv * 100) / 100;
+      const suffix = hrs >= 1 ? `${hrs}h` : `${Math.round(conv * 60)} min`;
+      const preview = amount > 0
+        ? `  ·  ${amount} ${unit} = ${this.fmtHours(amount * conv)}`
+        : '';
+      return `Each ${unit} = ${suffix}${preview}`;
+    } else {
+      // N units = 1 hour
+      const unitsPerHour = Math.round((1 / conv) * 100) / 100;
+      const preview = amount > 0
+        ? `  ·  ${amount} ${unit} = ${this.fmtHours(amount * conv)}`
+        : '';
+      return `Every ${unitsPerHour} ${unit} = 1h${preview}`;
+    }
+  }
+
+  private fmtHours(hours: number): string {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
   constructor(

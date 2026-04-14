@@ -133,23 +133,48 @@ import { UrlContextService } from '../../../core/services/url-context.service';
           </div>
 
           <!-- Volume -->
-          <div *ngIf="form.get('hourMode')?.value === 'volume'"
-               class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div *ngIf="form.get('hourMode')?.value === 'volume'" class="space-y-4">
+
+            <!-- Unit name -->
             <div>
               <label class="field-label">Unit name</label>
               <input type="text" formControlName="volumeUnitName"
-                     placeholder="e.g. bags collected" class="field-input" />
+                     placeholder="e.g. bags collected, km walked, meals served"
+                     class="field-input" />
               <p *ngIf="form.get('volumeUnitName')?.invalid && form.get('volumeUnitName')?.touched"
                  class="field-error">Unit name is required for volume mode.</p>
             </div>
-            <div>
-              <label class="field-label">Units → hours multiplier</label>
-              <input type="number" formControlName="volumeConversion" min="0.01" step="0.1"
-                     class="field-input" />
-              <p *ngIf="form.get('volumeConversion')?.invalid && form.get('volumeConversion')?.touched"
-                 class="field-error">Must be greater than 0.</p>
-              <p class="field-hint">e.g. 0.5 = each unit = 30 min</p>
+
+            <!-- Conversion equation: [ X ] units = [ Y ] hours -->
+            <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Conversion Rate</p>
+
+              <div class="flex items-center gap-2 flex-wrap">
+                <input type="number" formControlName="volumeUnitsInput"
+                       min="0.01" step="any"
+                       class="field-input !w-20 text-center" />
+                <span class="text-sm text-gray-700 font-medium whitespace-nowrap">
+                  {{ form.get('volumeUnitName')?.value || 'units' }}
+                </span>
+                <span class="text-gray-400 font-bold text-lg">=</span>
+                <input type="number" formControlName="volumeHoursInput"
+                       min="0.01" step="any"
+                       class="field-input !w-20 text-center" />
+                <span class="text-sm text-gray-700 font-medium">hour(s)</span>
+              </div>
+
+              <!-- Live preview -->
+              <p class="field-hint">
+                Preview: 1 {{ form.get('volumeUnitName')?.value || 'unit' }}
+                = <strong>{{ conversionPreview }}</strong>
+              </p>
+
+              <p *ngIf="form.get('volumeUnitsInput')?.invalid && form.get('volumeUnitsInput')?.touched"
+                 class="field-error">Units value must be greater than 0.</p>
+              <p *ngIf="form.get('volumeHoursInput')?.invalid && form.get('volumeHoursInput')?.touched"
+                 class="field-error">Hours value must be greater than 0.</p>
             </div>
+
           </div>
         </div>
 
@@ -250,6 +275,21 @@ export class CreateEventComponent implements OnInit {
       : 'One QR code is generated — students scan once to register attendance.';
   }
 
+  /** Live human-readable preview of the volume conversion rate. */
+  get conversionPreview(): string {
+    const units = +(this.form?.get('volumeUnitsInput')?.value ?? 1) || 1;
+    const hours = +(this.form?.get('volumeHoursInput')?.value ?? 1) || 1;
+    const rate  = hours / units;               // hours per 1 unit
+    if (rate >= 1) {
+      // e.g. "2h" or "2.5h"
+      const rounded = Math.round(rate * 100) / 100;
+      return `${rounded}h`;
+    }
+    // Less than 1 hour — show in minutes
+    const mins = Math.round(rate * 60);
+    return `${mins} min`;
+  }
+
   get qp() {
     const c = this.ctx.context;
     return c ? { email: c.email, role: c.role, schoolId: c.schoolId } : {};
@@ -272,7 +312,8 @@ export class CreateEventComponent implements OnInit {
       hourMode:        ['in-out',   Validators.required],
       fixedHours:      [1,          [Validators.min(0.5)]],
       volumeUnitName:  [''],
-      volumeConversion:[1,          [Validators.min(0.01)]],
+      volumeUnitsInput:[1,          [Validators.required, Validators.min(0.01)]],
+      volumeHoursInput:[1,          [Validators.required, Validators.min(0.01)]],
       pointsEnabled:   [false],
       pointsValue:     [10,         [Validators.min(1)]],
       hasDescription:  [false],
@@ -331,8 +372,11 @@ export class CreateEventComponent implements OnInit {
     if (v.eventCategoryId) dto.eventCategoryId = v.eventCategoryId;
     if (v.hourMode === 'fixed')  dto.fixedHours = v.fixedHours;
     if (v.hourMode === 'volume') {
-      dto.volumeUnitName  = v.volumeUnitName;
-      dto.volumeConversion = v.volumeConversion;
+      dto.volumeUnitName   = v.volumeUnitName;
+      // Derive the stored multiplier from the equation: X units = Y hours → rate = Y / X
+      const units = +v.volumeUnitsInput || 1;
+      const hours = +v.volumeHoursInput || 1;
+      dto.volumeConversion = hours / units;
     }
 
     this.eventsService.createEvent(dto).subscribe({
