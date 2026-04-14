@@ -42,9 +42,8 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             <mat-icon>arrow_back</mat-icon>
           </button>
           <h2 class="text-2xl font-bold text-gray-800 flex-1">Create Event</h2>
-          <button mat-stroked-button (click)="clearForm()" type="button"
-                  class="text-sm text-gray-500">
-            <mat-icon>refresh</mat-icon>
+          <button type="button" (click)="clearForm()"
+                  class="btn-secondary !px-4 !py-2 !text-sm">
             Clear
           </button>
         </div>
@@ -226,13 +225,9 @@ import { UrlContextService } from '../../../core/services/url-context.service';
           </div>
 
           <!-- ── Submit ─────────────────────────────────── -->
-          <button mat-raised-button type="submit"
-                  [disabled]="loading"
-                  class="w-full !py-3 !text-base !font-semibold"
-                  style="background-color: var(--color-primary); color: white;">
+          <button type="submit" [disabled]="loading" class="btn-primary w-full !py-3 !text-base">
             <span class="flex items-center justify-center gap-2">
               <mat-spinner *ngIf="loading" diameter="18"></mat-spinner>
-              <mat-icon *ngIf="!loading">qr_code</mat-icon>
               {{ loading ? 'Creating event...' : 'Create Event & Generate QR Codes' }}
             </span>
           </button>
@@ -254,10 +249,9 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             <h2 class="text-2xl font-bold text-gray-800">QR Codes Ready</h2>
             <p class="text-sm text-gray-500 truncate">{{ createdEvent.eventName }}</p>
           </div>
-          <button mat-stroked-button
+          <button type="button"
                   (click)="router.navigate(['/teacher/events', createdEvent._id], { queryParams: qp })"
-                  class="shrink-0 text-sm">
-            <mat-icon>visibility</mat-icon>
+                  class="btn-secondary shrink-0 !px-4 !py-2 !text-sm">
             View Event
           </button>
         </div>
@@ -310,8 +304,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
 
         <!-- Bottom: create another -->
         <div class="mt-8 pt-6 border-t border-gray-200">
-          <button mat-stroked-button (click)="clearForm()" class="w-full !py-3 text-sm text-gray-600">
-            <mat-icon>add</mat-icon>
+          <button type="button" (click)="clearForm()" class="btn-secondary w-full !py-3 !text-sm">
             Create Another Event
           </button>
         </div>

@@ -45,11 +45,8 @@ if (environment.agGridLicense) {
                    placeholder="Search events…"
                    class="field-input !pl-9 !w-52" />
           </div>
-          <button
-            mat-raised-button
-            (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })"
-            style="background-color: var(--color-primary); color: white;">
-            <mat-icon>add</mat-icon>
+          <button type="button" class="btn-primary !px-4 !py-2 !text-sm"
+                  (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
             New Event
           </button>
         </div>
@@ -75,11 +72,8 @@ if (environment.agGridLicense) {
         <mat-icon style="font-size: 56px; width: 56px; height: 56px;">event_busy</mat-icon>
         <p class="text-lg font-medium">No events yet</p>
         <p class="text-sm">Create your first event to get started</p>
-        <button
-          mat-raised-button
-          (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })"
-          style="background-color: var(--color-primary); color: white;">
-          <mat-icon>add</mat-icon>
+        <button type="button" class="btn-primary !px-5 !py-2.5"
+                (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
           Create Event
         </button>
       </div>
