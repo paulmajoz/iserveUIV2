@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Default theme colors — overridden at runtime by ThemeService */
+:root {
+  --color-primary: #2c698d;
+  --color-secondary: #272643;
+  --color-accent: #bae8e8;
+  --color-surface: #e3f6f5;
+  --color-background: #ffffff;
+}
+
+body {
+  background-color: var(--color-background);
+  color: #1a1a1a;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+}
+
+/* AG Grid theme override */
+.ag-theme-alpine {
+  --ag-header-background-color: var(--color-secondary);
+  --ag-header-foreground-color: #ffffff;
+  --ag-row-hover-color: var(--color-surface);
+  --ag-selected-row-background-color: var(--color-accent);
+  --ag-border-color: #e5e7eb;
+  --ag-font-size: 14px;
+}
+
+/* Utility classes */
+.btn-primary {
+  @apply bg-primary text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity;
+}
+
+.btn-secondary {
+  @apply bg-secondary text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+}
+
+.page-header {
+  background-color: var(--color-secondary);
+  @apply text-white px-6 py-4;
+}
+
