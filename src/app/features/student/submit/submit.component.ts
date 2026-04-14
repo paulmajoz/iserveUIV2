@@ -309,6 +309,13 @@ export class SubmitComponent implements OnInit {
       unitAmount:  [null, [Validators.min(0)]],
     });
 
+    // Guard: validate the eventId is a proper MongoDB ObjectId before hitting the API
+    if (!/^[a-f\d]{24}$/i.test(eventId)) {
+      this.loadError = `Invalid event link — the QR code may be damaged or the link is incorrect.`;
+      this.state = 'error';
+      return;
+    }
+
     this.eventsService.getEventById(eventId).subscribe({
       next: async (event) => {
         this.event = event;

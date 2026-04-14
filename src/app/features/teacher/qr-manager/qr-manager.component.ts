@@ -130,8 +130,17 @@ export class QrManagerComponent implements OnInit {
     private snack: MatSnackBar,
   ) {}
 
+  private isValidId(id: string): boolean {
+    return /^[a-f\d]{24}$/i.test(id);
+  }
+
   ngOnInit() {
     this.eventId = this.route.snapshot.paramMap.get('id') ?? '';
+    if (!this.isValidId(this.eventId)) {
+      this.loading = false;
+      this.loadError = `Invalid event ID "${this.eventId}". Navigate to an event from the Events list.`;
+      return;
+    }
     this.eventsService.getEventById(this.eventId).subscribe({
       next: e => {
         this.event = e;
