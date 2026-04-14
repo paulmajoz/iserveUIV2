@@ -1,6 +1,6 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { ApiService } from '../../../core/services/api.service';
@@ -9,155 +9,120 @@ import { ApiService } from '../../../core/services/api.service';
   selector: 'app-header',
   standalone: true,
   imports: [CommonModule, RouterModule, MatIconModule],
+  template: `
+    <header class="page-header">
+      <div class="h-inner">
+
+        <!-- Left: logo + school name -->
+        <div class="h-brand">
+          <img *ngIf="logoPath" [src]="logoPath" alt="School logo" class="h-logo" />
+          <div class="h-name-wrap">
+            <span class="h-name">{{ schoolName || 'iServe' }}</span>
+            <span class="h-sub">Attendance &amp; Community Service</span>
+          </div>
+        </div>
+
+        <!-- Right: nav links + email -->
+        <nav class="h-nav" *ngIf="ctx.context">
+          <a *ngIf="ctx.isTeacher()"
+             routerLink="/teacher/events"
+             [queryParams]="queryParams"
+             class="h-link">
+            Events
+          </a>
+          <a *ngIf="ctx.isStudent()"
+             routerLink="/student/dashboard"
+             [queryParams]="queryParams"
+             class="h-link">
+            Dashboard
+          </a>
+          <span class="h-email">{{ ctx.email }}</span>
+        </nav>
+
+      </div>
+    </header>
+  `,
   styles: [`
     :host { display: block; }
 
     header {
       background-color: var(--color-secondary);
-      color: white;
+      color: #fff;
     }
 
-    /* ── Top row: always present ── */
-    .header-top {
+    /* Single centred row, max 1200px, 16px side padding */
+    .h-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px;
       min-height: 56px;
+      gap: 12px;
     }
 
-    /* ── Nav row: shown on wider screens inline; on mobile as a second row ── */
-    .header-nav {
+    /* ── Brand (logo + name) ── */
+    .h-brand {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 10px;
+      min-width: 0;
+      flex-shrink: 1;
     }
-
-    .nav-link {
-      opacity: 0.85;
-      font-size: 0.875rem;
-      font-weight: 500;
-      padding: 0.35rem 0.6rem;
-      border-radius: 6px;
+    .h-logo { height: 36px; width: auto; flex-shrink: 0; }
+    .h-name-wrap { min-width: 0; }
+    .h-name {
+      display: block;
+      font-weight: 700;
+      font-size: 1.05rem;
       white-space: nowrap;
-      transition: opacity 0.15s, background 0.15s;
-      text-decoration: none;
-      color: white;
-    }
-    .nav-link:hover { opacity: 1; background: rgba(255,255,255,0.12); }
-
-    .nav-btn {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      color: white;
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 0.3rem 0.75rem;
-      border-radius: 6px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-      text-decoration: none;
-    }
-    .nav-btn:hover { background: rgba(255,255,255,0.25); }
-
-    /* Email badge */
-    .email-badge {
-      font-size: 0.7rem;
-      opacity: 0.55;
-      max-width: 140px;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    .h-sub {
+      display: block;
+      font-size: 0.68rem;
+      opacity: 0.65;
       white-space: nowrap;
     }
 
-    /* Mobile second row for nav */
-    .header-nav-row {
-      display: none;
-      padding: 0 1rem 0.5rem;
-      gap: 0.5rem;
-      flex-wrap: wrap;
+    /* ── Nav ── */
+    .h-nav {
+      display: flex;
       align-items: center;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .h-link {
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .h-link:hover { background: rgba(255,255,255,0.15); }
+
+    .h-email {
+      font-size: 0.72rem;
+      opacity: 0.55;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
     }
 
-    /* ── Responsive breakpoints ── */
-
-    /* ≤ 480px : compact mode */
+    /* ── Mobile: hide subtitle + email, shrink name ── */
     @media (max-width: 480px) {
-      /* Hide nav from top row */
-      .header-top .header-nav { display: none; }
-      /* Show nav as second row */
-      .header-nav-row { display: flex; }
-      /* School name smaller */
-      .school-name { font-size: 0.95rem; }
-      .school-sub  { display: none; }
-      /* Logo smaller */
-      .school-logo { height: 28px; }
-    }
-
-    /* 481–767px : mid-size, keep inline but hide email */
-    @media (min-width: 481px) and (max-width: 767px) {
-      .email-badge { display: none; }
-      .school-name { font-size: 1rem; }
+      .h-sub   { display: none; }
+      .h-email { display: none; }
+      .h-name  { font-size: 0.9rem; }
+      .h-logo  { height: 28px; }
     }
   `],
-  template: `
-    <header>
-      <!-- ── Top row ── -->
-      <div class="header-top">
-
-        <!-- Left: logo + name -->
-        <div class="flex items-center gap-2 min-w-0">
-          <img *ngIf="logoPath" [src]="logoPath" alt="School logo" class="school-logo h-9 w-auto flex-shrink-0" />
-          <div class="min-w-0">
-            <p class="school-name font-bold leading-tight truncate text-xl">{{ schoolName || 'iServe' }}</p>
-            <p class="school-sub text-xs opacity-70 truncate">Attendance &amp; Community Service</p>
-          </div>
-        </div>
-
-        <!-- Right: nav (hidden on mobile — shown in second row instead) -->
-        <nav class="header-nav" *ngIf="ctx.context" aria-label="Main navigation">
-          <ng-container *ngIf="ctx.isTeacher()">
-            <a routerLink="/teacher/events" [queryParams]="queryParams" class="nav-link">Events</a>
-            <a routerLink="/teacher/events/create" [queryParams]="queryParams" class="nav-btn">
-              <mat-icon style="font-size:16px;width:16px;height:16px;line-height:16px">add</mat-icon>
-              New Event
-            </a>
-          </ng-container>
-          <ng-container *ngIf="ctx.isStudent()">
-            <a routerLink="/student/dashboard" [queryParams]="queryParams" class="nav-link">My Dashboard</a>
-          </ng-container>
-          <span class="email-badge">{{ ctx.email }}</span>
-        </nav>
-      </div>
-
-      <!-- ── Mobile nav row (shown only on ≤480px) ── -->
-      <div class="header-nav-row" *ngIf="ctx.context">
-        <ng-container *ngIf="ctx.isTeacher()">
-          <a routerLink="/teacher/events" [queryParams]="queryParams" class="nav-link">
-            <mat-icon style="font-size:15px;width:15px;height:15px;vertical-align:-3px;margin-right:3px">event</mat-icon>
-            Events
-          </a>
-          <a routerLink="/teacher/events/create" [queryParams]="queryParams" class="nav-btn">
-            <mat-icon style="font-size:15px;width:15px;height:15px;line-height:15px">add</mat-icon>
-            New Event
-          </a>
-        </ng-container>
-        <ng-container *ngIf="ctx.isStudent()">
-          <a routerLink="/student/dashboard" [queryParams]="queryParams" class="nav-link">
-            <mat-icon style="font-size:15px;width:15px;height:15px;vertical-align:-3px;margin-right:3px">dashboard</mat-icon>
-            My Dashboard
-          </a>
-        </ng-container>
-        <!-- Email always visible in mobile row, but truncated -->
-        <span class="text-xs opacity-50 truncate ml-auto" style="max-width:160px">{{ ctx.email }}</span>
-      </div>
-    </header>
-  `,
 })
 export class HeaderComponent implements OnInit {
   schoolName = '';
