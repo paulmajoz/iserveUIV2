@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AgGridAngular } from 'ag-grid-angular';
-import { ColDef, GridOptions } from 'ag-grid-community';
+import { ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
@@ -130,6 +130,7 @@ interface ProgressBar {
               rowGroupPanelShow="never"
               pivotPanelShow="never"
               [sideBar]="false"
+              (gridReady)="onGridReady($event)"
             ></ag-grid-angular>
           </div>
         </div>
@@ -154,6 +155,7 @@ export class DashboardComponent implements OnInit {
   progressBars: ProgressBar[] = [];
   apiError = '';
   attendanceError = '';
+  private gridApi: any;
 
   get displayName(): string {
     const c = this.ctx.context;
@@ -176,24 +178,25 @@ export class DashboardComponent implements OnInit {
     return Object.entries(this.summary?.hoursByCategory ?? {});
   }
 
+  // colId on every column so setColumnsVisible references are unambiguous
   columnDefs: ColDef[] = [
-    { field: 'eventId', headerName: 'Event', flex: 2, filter: 'agTextColumnFilter' },
+    { colId: 'eventId', field: 'eventId', headerName: 'Event', flex: 2, minWidth: 120, filter: 'agTextColumnFilter' },
     {
-      field: 'timeIn', headerName: 'Date', width: 130,
+      colId: 'timeIn', field: 'timeIn', headerName: 'Date', width: 130,
       valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : '—',
       sort: 'desc',
     },
     {
-      field: 'hours', headerName: 'Hours', width: 100,
+      colId: 'hours', field: 'hours', headerName: 'Hours', width: 100,
       valueFormatter: (p: any) => {
         if (p.value == null) return '—';
         const h = Math.floor(p.value), m = Math.round((p.value - h) * 60);
         return h > 0 ? `${h}h ${m}m` : `${m}m`;
       },
     },
-    { field: 'pointsAwarded', headerName: 'Points', width: 90 },
+    { colId: 'pointsAwarded', field: 'pointsAwarded', headerName: 'Points', width: 90 },
     {
-      field: 'source', headerName: 'Type', width: 100,
+      colId: 'source', field: 'source', headerName: 'Type', width: 100,
       cellRenderer: (p: any) => p.value === 'assisted'
         ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Assisted</span>'
         : '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Self</span>',
@@ -260,6 +263,22 @@ export class DashboardComponent implements OnInit {
         checkDone();
       },
     });
+  }
+
+  onGridReady(e: GridReadyEvent) {
+    this.gridApi = e.api;
+    this.applyResponsiveColumns();
+    window.addEventListener('resize', () => this.applyResponsiveColumns());
+  }
+
+  // xs  < 480 : Event name + Hours
+  // sm  480+  : + Type (source)
+  // md  768+  : + Date + Points
+  private applyResponsiveColumns() {
+    if (!this.gridApi) return;
+    const w = window.innerWidth;
+    this.gridApi.setColumnsVisible(['source'],                   w >= 480);
+    this.gridApi.setColumnsVisible(['timeIn', 'pointsAwarded'],  w >= 768);
   }
 
   private buildProgressBars(summary: AttendanceSummary) {

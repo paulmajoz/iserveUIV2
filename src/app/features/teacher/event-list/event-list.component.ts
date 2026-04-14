@@ -16,6 +16,13 @@ import { environment } from '../../../../environments/environment';
 ModuleRegistry.registerModules([MasterDetailModule]);
 if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLicense);
 
+// ── Responsive breakpoints ────────────────────────────────────────────────────
+// xs  < 480   phone portrait  : eventName + actions only
+// sm  480–767 phone landscape : + Mode badge
+// md  768–1023 tablet         : + Hours + Points
+// lg  ≥ 1024  desktop         : + Created date
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Component({
   selector: 'app-event-list',
   standalone: true,
@@ -102,6 +109,7 @@ export class EventListComponent implements OnInit {
   apiError = '';
   searchCtrl = new FormControl('');
   private gridApi: any;
+  private detailApis: any[] = [];   // track open detail-grid apis for resize
 
   get qp() {
     const c = this.ctx.context;
@@ -110,14 +118,15 @@ export class EventListComponent implements OnInit {
 
   // ── Master columns ────────────────────────────────────────────────────────
   columnDefs: ColDef[] = [
-    // Expand chevron is automatic with masterDetail — no need to add manually
     {
       field: 'eventName',
       headerName: 'Event Name',
       flex: 3,
+      minWidth: 140,
       filter: 'agTextColumnFilter',
     },
     {
+      colId: 'qrMode',
       field: 'qrMode',
       headerName: 'Mode',
       width: 110,
@@ -127,6 +136,7 @@ export class EventListComponent implements OnInit {
           : '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Once-Off</span>',
     },
     {
+      colId: 'hourMode',
       field: 'hourMode',
       headerName: 'Hours',
       width: 120,
@@ -134,6 +144,7 @@ export class EventListComponent implements OnInit {
         ({ 'in-out': 'In/Out', fixed: 'Fixed', volume: 'Volume', disabled: 'None' }[p.value as string] ?? p.value),
     },
     {
+      colId: 'pointsEnabled',
       field: 'pointsEnabled',
       headerName: 'Points',
       width: 90,
@@ -143,6 +154,7 @@ export class EventListComponent implements OnInit {
           : '<span class="text-gray-400 text-sm">—</span>',
     },
     {
+      colId: 'createdAt',
       field: 'createdAt',
       headerName: 'Created',
       width: 130,
@@ -150,19 +162,21 @@ export class EventListComponent implements OnInit {
       valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : '—',
     },
     {
+      colId: 'actions',
       headerName: '',
-      width: 130,
+      width: 150,
+      minWidth: 150,
       sortable: false,
       filter: false,
       cellRenderer: (p: any) => `
         <div class="flex items-center gap-2 h-full">
           <button data-action="qr" data-id="${p.data._id}"
-            class="text-xs px-3 py-1.5 rounded-lg font-semibold text-white transition-opacity hover:opacity-80"
+            class="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white transition-opacity hover:opacity-80"
             style="background-color:var(--color-secondary)">
-            QR Codes
+            QR
           </button>
           <button data-action="detail" data-id="${p.data._id}"
-            class="text-xs px-3 py-1.5 rounded-lg font-semibold text-white transition-opacity hover:opacity-80"
+            class="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white transition-opacity hover:opacity-80"
             style="background-color:var(--color-primary)">
             Open
           </button>
@@ -190,7 +204,6 @@ export class EventListComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Build grid options here so `this` is valid in the detail callback
     this.gridOptions = {
       defaultColDef: { resizable: true, sortable: true },
       pagination: true,
@@ -201,46 +214,69 @@ export class EventListComponent implements OnInit {
 
       // ── Master / Detail ──────────────────────────────────────────────────
       masterDetail: true,
-      detailRowHeight: 340,
+      detailRowHeight: 320,
       detailRowAutoHeight: false,
       embedFullWidthRows: true,
-
-      isRowMaster: () => true,   // every event row is expandable
+      isRowMaster: () => true,
 
       detailCellRendererParams: {
-        // columns for the attendance sub-grid
         detailGridOptions: {
           rowHeight: 42,
-          defaultColDef: { resizable: true, sortable: true, flex: 1 },
+          defaultColDef: { resizable: true, sortable: true },
           suppressCellFocus: true,
+          rowGroupPanelShow: 'never',
+          pivotPanelShow:    'never',
+
+          // Responsive visibility applied via onGridReady arrow fn below
+          onGridReady: (e: any) => {
+            this.detailApis.push(e.api);
+            this.applyDetailResponsive(e.api);
+            // Remove from tracking list when the detail grid is torn down
+            e.api.addEventListener('gridDestroyed', () => {
+              this.detailApis = this.detailApis.filter(a => a !== e.api);
+            });
+          },
+
           columnDefs: [
             {
+              colId: 'student',
               headerName: 'Student',
               flex: 2,
+              minWidth: 120,
               valueGetter: (p: any) =>
                 [p.data.studentFirstName, p.data.studentLastName].filter(Boolean).join(' ')
                 || p.data.studentEmail,
             },
-            { field: 'studentEmail',  headerName: 'Email',  flex: 2 },
             {
+              colId: 'studentEmail',
+              field: 'studentEmail',
+              headerName: 'Email',
+              flex: 2,
+              minWidth: 140,
+            },
+            {
+              colId: 'gradeClass',
               headerName: 'Grade / Class',
               width: 120,
               valueGetter: (p: any) =>
                 [p.data.studentGrade, p.data.studentClass].filter(Boolean).join(' · ') || '—',
             },
             {
+              colId: 'timeIn',
               field: 'timeIn',
               headerName: 'Time In',
               width: 150,
               valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '—',
             },
             {
+              colId: 'timeOut',
               field: 'timeOut',
               headerName: 'Time Out',
               width: 150,
               valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '—',
             },
             {
+              colId: 'hours',
               field: 'hours',
               headerName: 'Hours',
               width: 90,
@@ -252,6 +288,7 @@ export class EventListComponent implements OnInit {
               },
             },
             {
+              colId: 'pointsAwarded',
               field: 'pointsAwarded',
               headerName: 'Points',
               width: 80,
@@ -261,6 +298,7 @@ export class EventListComponent implements OnInit {
                   : '<span class="text-gray-400">0</span>',
             },
             {
+              colId: 'source',
               field: 'source',
               headerName: 'Source',
               width: 100,
@@ -272,7 +310,6 @@ export class EventListComponent implements OnInit {
           ] as ColDef[],
         },
 
-        // Lazy-load attendance for the expanded event
         getDetailRowData: (params: any) => {
           this.attendanceService.getByEvent(params.data._id).subscribe({
             next:  (records) => params.successCallback(records),
@@ -282,7 +319,6 @@ export class EventListComponent implements OnInit {
       },
     };
 
-    // Load events
     const c = this.ctx.context;
     if (!c) {
       this.loading = false;
@@ -300,14 +336,37 @@ export class EventListComponent implements OnInit {
 
   onGridReady(e: GridReadyEvent) {
     this.gridApi = e.api;
-    this.adjustColumnsForScreenSize();
-    window.addEventListener('resize', () => this.adjustColumnsForScreenSize());
+    this.applyMasterResponsive();
+    window.addEventListener('resize', () => {
+      this.applyMasterResponsive();
+      this.detailApis.forEach(api => this.applyDetailResponsive(api));
+    });
   }
 
-  private adjustColumnsForScreenSize() {
+  // ── Master grid responsive column visibility ──────────────────────────────
+  // xs  < 480 : eventName + actions
+  // sm  480+  : + qrMode (Mode)
+  // md  768+  : + hourMode (Hours) + pointsEnabled (Points)
+  // lg  1024+ : + createdAt (Created)
+  private applyMasterResponsive() {
     if (!this.gridApi) return;
-    const mobile = window.innerWidth < 768;
-    this.gridApi.setColumnsVisible(['hourMode', 'pointsEnabled', 'createdAt'], !mobile);
+    const w = window.innerWidth;
+    this.gridApi.setColumnsVisible(['qrMode'],                    w >= 480);
+    this.gridApi.setColumnsVisible(['hourMode', 'pointsEnabled'], w >= 768);
+    this.gridApi.setColumnsVisible(['createdAt'],                 w >= 1024);
+  }
+
+  // ── Detail sub-grid responsive column visibility ──────────────────────────
+  // xs  < 480 : student name + hours
+  // sm  480+  : + source
+  // md  768+  : + studentEmail + gradeClass
+  // lg  1024+ : + timeIn + timeOut + pointsAwarded
+  private applyDetailResponsive(api: any) {
+    if (!api) return;
+    const w = window.innerWidth;
+    api.setColumnsVisible(['source'],                          w >= 480);
+    api.setColumnsVisible(['studentEmail', 'gradeClass'],      w >= 768);
+    api.setColumnsVisible(['timeIn', 'timeOut', 'pointsAwarded'], w >= 1024);
   }
 
   onSearch() {

@@ -166,34 +166,40 @@ export class EventDetailComponent implements OnInit {
     return map[this.event?.hourMode ?? ''] ?? (this.event?.hourMode ?? '');
   }
 
+  // colId on every column so setColumnsVisible references are unambiguous
   columnDefs: ColDef[] = [
     {
+      colId: 'student',
       headerName: 'Student',
-      valueGetter: (p: any) => [p.data.studentFirstName, p.data.studentLastName].filter(Boolean).join(' ') || p.data.studentEmail,
-      flex: 2, filter: 'agTextColumnFilter',
+      flex: 2,
+      minWidth: 120,
+      filter: 'agTextColumnFilter',
+      valueGetter: (p: any) =>
+        [p.data.studentFirstName, p.data.studentLastName].filter(Boolean).join(' ')
+        || p.data.studentEmail,
     },
-    { field: 'studentEmail', headerName: 'Email', flex: 2, filter: 'agTextColumnFilter' },
-    { field: 'studentGrade', headerName: 'Grade', width: 90 },
-    { field: 'studentClass', headerName: 'Class', width: 90 },
+    { colId: 'studentEmail',  field: 'studentEmail',  headerName: 'Email',    flex: 2, minWidth: 140, filter: 'agTextColumnFilter' },
+    { colId: 'studentGrade',  field: 'studentGrade',  headerName: 'Grade',    width: 80 },
+    { colId: 'studentClass',  field: 'studentClass',  headerName: 'Class',    width: 80 },
     {
-      field: 'timeIn', headerName: 'Time In', width: 160,
+      colId: 'timeIn', field: 'timeIn', headerName: 'Time In', width: 160,
       valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '—',
     },
     {
-      field: 'timeOut', headerName: 'Time Out', width: 160,
+      colId: 'timeOut', field: 'timeOut', headerName: 'Time Out', width: 160,
       valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '—',
     },
     {
-      field: 'hours', headerName: 'Hours', width: 100,
+      colId: 'hours', field: 'hours', headerName: 'Hours', width: 100,
       valueFormatter: (p: any) => {
         if (p.value == null) return '—';
         const h = Math.floor(p.value), m = Math.round((p.value - h) * 60);
         return h > 0 ? `${h}h ${m}m` : `${m}m`;
       },
     },
-    { field: 'pointsAwarded', headerName: 'Points', width: 100 },
+    { colId: 'pointsAwarded', field: 'pointsAwarded', headerName: 'Points', width: 90 },
     {
-      field: 'source', headerName: 'Source', width: 110,
+      colId: 'source', field: 'source', headerName: 'Source', width: 110,
       cellRenderer: (p: any) => p.value === 'assisted'
         ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Assisted</span>'
         : '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Self</span>',
@@ -255,9 +261,20 @@ export class EventDetailComponent implements OnInit {
 
   onGridReady(e: GridReadyEvent) {
     this.gridApi = e.api;
-    if (window.innerWidth < 768) {
-      this.gridApi.setColumnsVisible(['studentEmail', 'studentClass', 'source'], false);
-    }
+    this.applyResponsiveColumns();
+    window.addEventListener('resize', () => this.applyResponsiveColumns());
+  }
+
+  // xs  < 480 : Student name + Hours
+  // sm  480+  : + Source + Points
+  // md  768+  : + Email + Time In
+  // lg  1024+ : + Grade + Class + Time Out
+  private applyResponsiveColumns() {
+    if (!this.gridApi) return;
+    const w = window.innerWidth;
+    this.gridApi.setColumnsVisible(['source', 'pointsAwarded'],              w >= 480);
+    this.gridApi.setColumnsVisible(['studentEmail', 'timeIn'],               w >= 768);
+    this.gridApi.setColumnsVisible(['studentGrade', 'studentClass', 'timeOut'], w >= 1024);
   }
 
   exportCsv() {
