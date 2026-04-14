@@ -86,6 +86,9 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
           [rowData]="events"
           [columnDefs]="columnDefs"
           [gridOptions]="gridOptions"
+          rowGroupPanelShow="never"
+          pivotPanelShow="never"
+          [sideBar]="false"
           (gridReady)="onGridReady($event)"
         ></ag-grid-angular>
       </div>
@@ -113,7 +116,6 @@ export class EventListComponent implements OnInit {
       headerName: 'Event Name',
       flex: 3,
       filter: 'agTextColumnFilter',
-      cellRenderer: 'agGroupCellRenderer',   // renders the expand toggle
     },
     {
       field: 'qrMode',

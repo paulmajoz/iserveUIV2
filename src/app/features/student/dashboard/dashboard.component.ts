@@ -127,6 +127,9 @@ interface ProgressBar {
               [rowData]="attendance"
               [columnDefs]="columnDefs"
               [gridOptions]="gridOptions"
+              rowGroupPanelShow="never"
+              pivotPanelShow="never"
+              [sideBar]="false"
             ></ag-grid-angular>
           </div>
         </div>

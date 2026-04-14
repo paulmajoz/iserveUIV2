@@ -127,6 +127,9 @@ import { UrlContextService } from '../../../core/services/url-context.service';
           [rowData]="attendance"
           [columnDefs]="columnDefs"
           [gridOptions]="gridOptions"
+          rowGroupPanelShow="never"
+          pivotPanelShow="never"
+          [sideBar]="false"
           (gridReady)="onGridReady($event)"
         ></ag-grid-angular>
       </div>
