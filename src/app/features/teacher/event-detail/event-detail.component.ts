@@ -2,7 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AgGridAngular } from 'ag-grid-angular';
-import { ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
+import { ModuleRegistry, ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
+import { ExcelExportModule } from 'ag-grid-enterprise';
+
+ModuleRegistry.registerModules([ExcelExportModule]);
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
@@ -116,10 +119,10 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <!-- Attendance grid -->
       <div *ngIf="event && !attendanceError" class="flex-1 p-4">
         <div class="flex justify-end mb-2">
-          <button type="button" (click)="exportCsv()"
+          <button type="button" (click)="exportExcel()"
                   class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
             <mat-icon class="!text-base !w-4 !h-4">download</mat-icon>
-            Export CSV
+            Export Excel
           </button>
         </div>
         <ag-grid-angular
@@ -277,8 +280,11 @@ export class EventDetailComponent implements OnInit {
     this.gridApi.setColumnsVisible(['studentGrade', 'studentClass', 'timeOut'], w >= 1024);
   }
 
-  exportCsv() {
-    this.gridApi?.exportDataAsCsv({ fileName: `${this.event?.eventName ?? 'attendance'}.csv` });
+  exportExcel() {
+    this.gridApi?.exportDataAsExcel({
+      fileName: `${this.event?.eventName ?? 'attendance'}.xlsx`,
+      sheetName: 'Attendees',
+    });
   }
 
   onStudentScanned(payload: ScannedPayload) {
