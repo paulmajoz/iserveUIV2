@@ -7,8 +7,23 @@ import { routes } from './app.routes';
 import { ThemeService } from './core/theme/theme.service';
 import { environment } from '../environments/environment';
 
+/**
+ * Read schoolId from the raw URL query string.
+ * APP_INITIALIZER runs before Angular's router processes the URL,
+ * so we parse window.location.search directly.
+ * Falls back to environment.defaultSchoolId if not present.
+ */
+function getStartupSchoolId(): number {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('schoolId');
+    if (fromUrl) return +fromUrl;
+  } catch { /* not in a browser context */ }
+  return environment.defaultSchoolId;
+}
+
 function initTheme(theme: ThemeService) {
-  return () => theme.loadAndApply(environment.defaultSchoolId);
+  return () => theme.loadAndApply(getStartupSchoolId());
 }
 
 export const appConfig: ApplicationConfig = {

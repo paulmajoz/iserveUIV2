@@ -13,25 +13,33 @@ export interface ThemeColors {
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  /** Track which school IDs we have already loaded so we don't re-fetch */
+  private loaded = new Set<number>();
+
   constructor(private http: HttpClient) {}
 
   async loadAndApply(schoolId: number): Promise<void> {
+    if (!schoolId || this.loaded.has(schoolId)) return;
     try {
       const colors = await firstValueFrom(
         this.http.get<ThemeColors>(`${environment.apiUrl}/schools/id/${schoolId}/theme`)
       );
-      this.apply(colors);
+      if (colors) {
+        this.apply(colors);
+        this.loaded.add(schoolId);
+      }
     } catch {
-      // Keep default CSS variable values from styles.css
+      // School not found or API offline — keep default CSS variable values from styles.css
     }
   }
 
   apply(colors: ThemeColors): void {
+    if (!colors) return;
     const root = document.documentElement;
-    root.style.setProperty('--color-primary', colors.primary);
-    root.style.setProperty('--color-secondary', colors.secondary);
-    root.style.setProperty('--color-accent', colors.accent);
-    root.style.setProperty('--color-surface', colors.surface);
-    root.style.setProperty('--color-background', colors.background);
+    if (colors.primary)    root.style.setProperty('--color-primary',    colors.primary);
+    if (colors.secondary)  root.style.setProperty('--color-secondary',  colors.secondary);
+    if (colors.accent)     root.style.setProperty('--color-accent',     colors.accent);
+    if (colors.surface)    root.style.setProperty('--color-surface',    colors.surface);
+    if (colors.background) root.style.setProperty('--color-background', colors.background);
   }
 }
