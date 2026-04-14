@@ -289,7 +289,8 @@ export class EventListComponent implements OnInit, OnDestroy {
 
       // ── Master / Detail ────────────────────────────────────────────────
       masterDetail: true,
-      detailRowAutoHeight: true,      // expands to fit paginated sub-grid
+      // fixed height: 40px panel header + 38px col headers + 10×34px rows + 48px pagination bar
+      detailRowHeight: 466,
       embedFullWidthRows: true,
       isRowMaster: () => true,
 
