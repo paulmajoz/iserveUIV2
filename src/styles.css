@@ -1,5 +1,4 @@
-@use '@angular/material' as mat;
-@include mat.core();
+/* Angular Material prebuilt theme loaded via angular.json styles[] */
 
 /* ── Default palette — overridden at runtime by ThemeService via CSS vars ── */
 :root {
