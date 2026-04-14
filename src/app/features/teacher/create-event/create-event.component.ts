@@ -100,24 +100,6 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             </div>
           </div>
 
-          <!-- ── QR Code Mode ───────────────────────────── -->
-          <div class="bg-white rounded-2xl shadow-sm p-5">
-            <p class="form-section-label">QR Code Mode</p>
-            <div class="seg-control">
-              <button type="button" class="seg-btn"
-                      [class.active]="form.get('qrMode')?.value === 'once-off'"
-                      (click)="form.get('qrMode')?.setValue('once-off')">
-                Once-Off
-              </button>
-              <button type="button" class="seg-btn"
-                      [class.active]="form.get('qrMode')?.value === 'in-out'"
-                      (click)="form.get('qrMode')?.setValue('in-out')">
-                Sign In &amp; Out
-              </button>
-            </div>
-            <p class="field-hint mt-2">{{ qrModeHint }}</p>
-          </div>
-
           <!-- ── Hours Tracking ─────────────────────────── -->
           <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
             <p class="form-section-label">Hours Tracking</p>
@@ -366,12 +348,6 @@ export class CreateEventComponent implements OnInit {
     { key: 'hasGeolocate',   label: 'Geolocation', desc: 'Capture GPS coordinates on scan',       emoji: '📍' },
   ];
 
-  get qrModeHint(): string {
-    return this.form?.get('qrMode')?.value === 'in-out'
-      ? 'Two QR codes are generated — one for sign-in, one for sign-out.'
-      : 'One QR code is generated — students scan once to register attendance.';
-  }
-
   get conversionPreview(): string {
     const units = +(this.form?.get('volumeUnitsInput')?.value ?? 1) || 1;
     const hours = +(this.form?.get('volumeHoursInput')?.value ?? 1) || 1;
@@ -415,7 +391,6 @@ export class CreateEventComponent implements OnInit {
       eventName:       ['', [Validators.required, Validators.minLength(3)]],
       eventTypeId:     [''],
       eventCategoryId: [''],
-      qrMode:          ['once-off', Validators.required],
       hourMode:        ['in-out',   Validators.required],
       fixedHours:      [1,          [Validators.min(0.5)]],
       volumeUnitName:  [''],
@@ -433,7 +408,7 @@ export class CreateEventComponent implements OnInit {
   clearForm() {
     this.form.reset({
       eventName: '', eventTypeId: '', eventCategoryId: '',
-      qrMode: 'once-off', hourMode: 'in-out',
+      hourMode: 'in-out',
       fixedHours: 1,
       volumeUnitName: '', volumeUnitsInput: 1, volumeHoursInput: 1,
       pointsEnabled: false, pointsValue: 10,
@@ -457,12 +432,15 @@ export class CreateEventComponent implements OnInit {
     const v = this.form.value;
     const c = this.ctx.context;
 
+    // In/Out Duration is the only mode that needs a sign-out QR code
+    const qrMode = v.hourMode === 'in-out' ? 'in-out' : 'once-off';
+
     const dto: any = {
       eventName:     v.eventName,
       school:        String(c?.schoolId ?? ''),
       teacher:       [c?.firstName, c?.lastName].filter(Boolean).join(' ') || (c?.email ?? ''),
       teacherEmail:  c?.email ?? '',
-      qrMode:        v.qrMode,
+      qrMode,
       hourMode:      v.hourMode,
       pointsEnabled: v.pointsEnabled,
       pointsValue:   v.pointsEnabled ? v.pointsValue : 0,
