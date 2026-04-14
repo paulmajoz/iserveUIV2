@@ -291,6 +291,16 @@ export class EventListComponent implements OnInit {
       rowGroupPanelShow: 'never',
       pivotPanelShow:    'never',
 
+      // ── Row click expands / collapses detail ──────────────────────────────
+      rowClass: 'cursor-pointer',
+      suppressRowClickSelection: true,
+      onRowClicked: (e: any) => {
+        // Ignore clicks that originated from an action button
+        const target = e.event?.target as HTMLElement | null;
+        if (target?.closest('[data-action]')) return;
+        e.node.setExpanded(!e.node.expanded);
+      },
+
       masterDetail: true,
       detailRowHeight: 320,
       detailRowAutoHeight: false,

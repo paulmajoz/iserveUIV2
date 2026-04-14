@@ -92,6 +92,8 @@ body {
 }
 
 /* ── AG Grid — header uses school secondary; rows use fixed neutrals ── */
+.ag-theme-alpine .ag-row.cursor-pointer { cursor: pointer; }
+
 .ag-theme-alpine {
   --ag-header-background-color:        var(--color-secondary);
   --ag-header-foreground-color:        #ffffff;
