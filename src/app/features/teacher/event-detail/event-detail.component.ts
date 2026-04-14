@@ -83,7 +83,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       </div>
 
       <!-- Scanner panel -->
-      <div *ngIf="showScanner" class="px-6 py-4 bg-surface border-b border-gray-100 flex flex-col items-center gap-4">
+      <div *ngIf="showScanner" class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-col items-center gap-4">
         <p class="text-sm font-medium text-gray-600">Scan a student's QR badge to record attendance</p>
         <app-qr-scanner (scanned)="onStudentScanned($event)"></app-qr-scanner>
         <div *ngIf="scanError" class="error-banner w-full max-w-md">

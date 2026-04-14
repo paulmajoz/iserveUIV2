@@ -2,8 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -25,8 +23,6 @@ if (environment.agGridLicense) {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -41,12 +37,14 @@ if (environment.agGridLicense) {
       <div class="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100 gap-4">
         <h2 class="text-xl font-bold text-gray-800 shrink-0">Events</h2>
         <div class="flex items-center gap-3 flex-1 justify-end">
-          <!-- Material search field -->
-          <mat-form-field appearance="outline" class="!w-56">
-            <mat-label>Search events</mat-label>
-            <input matInput [formControl]="searchCtrl" (input)="onSearch()" />
-            <mat-icon matSuffix>search</mat-icon>
-          </mat-form-field>
+          <!-- Search -->
+          <div class="relative">
+            <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      style="font-size: 18px; width: 18px; height: 18px;">search</mat-icon>
+            <input type="text" [formControl]="searchCtrl" (input)="onSearch()"
+                   placeholder="Search events…"
+                   class="field-input !pl-9 !w-52" />
+          </div>
           <button
             mat-raised-button
             (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })"
