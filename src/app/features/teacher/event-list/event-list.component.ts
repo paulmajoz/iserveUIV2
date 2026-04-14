@@ -1,6 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AgGridAngular } from 'ag-grid-angular';
 import { LicenseManager } from 'ag-grid-enterprise';
 import { ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
@@ -16,31 +22,72 @@ if (environment.agGridLicense) {
 @Component({
   selector: 'app-event-list',
   standalone: true,
-  imports: [CommonModule, AgGridAngular, HeaderComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    AgGridAngular,
+    HeaderComponent,
+  ],
   template: `
     <app-header></app-header>
 
     <main class="flex flex-col h-[calc(100vh-64px)]">
       <!-- Toolbar -->
-      <div class="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100">
-        <h2 class="text-xl font-bold text-gray-800">Events</h2>
-        <div class="flex gap-3">
-          <input
-            type="text"
-            placeholder="Search events..."
-            (input)="onSearch($event)"
-            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
-          />
+      <div class="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100 gap-4">
+        <h2 class="text-xl font-bold text-gray-800 shrink-0">Events</h2>
+        <div class="flex items-center gap-3 flex-1 justify-end">
+          <!-- Material search field -->
+          <mat-form-field appearance="outline" class="!w-56">
+            <mat-label>Search events</mat-label>
+            <input matInput [formControl]="searchCtrl" (input)="onSearch()" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
           <button
+            mat-raised-button
             (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })"
-            class="btn-primary text-sm">
-            + New Event
+            style="background-color: var(--color-primary); color: white;">
+            <mat-icon>add</mat-icon>
+            New Event
           </button>
         </div>
       </div>
 
+      <!-- API error banner -->
+      <div *ngIf="apiError" class="error-banner mx-6 mt-4">
+        <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
+        <div>
+          <p class="font-semibold">Could not load events</p>
+          <p class="mt-0.5 text-red-600">{{ apiError }}</p>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="loading" class="flex justify-center py-16">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!loading && !apiError && events.length === 0"
+           class="flex flex-col items-center justify-center flex-1 gap-4 text-gray-400">
+        <mat-icon style="font-size: 56px; width: 56px; height: 56px;">event_busy</mat-icon>
+        <p class="text-lg font-medium">No events yet</p>
+        <p class="text-sm">Create your first event to get started</p>
+        <button
+          mat-raised-button
+          (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })"
+          style="background-color: var(--color-primary); color: white;">
+          <mat-icon>add</mat-icon>
+          Create Event
+        </button>
+      </div>
+
       <!-- AG Grid -->
-      <div class="flex-1 p-4">
+      <div *ngIf="!loading && events.length > 0" class="flex-1 p-4">
         <ag-grid-angular
           class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden shadow-sm"
           [rowData]="events"
@@ -55,6 +102,9 @@ if (environment.agGridLicense) {
 })
 export class EventListComponent implements OnInit {
   events: IEvent[] = [];
+  loading = true;
+  apiError = '';
+  searchCtrl = new FormControl('');
   private gridApi: any;
 
   get qp() {
@@ -96,7 +146,7 @@ export class EventListComponent implements OnInit {
         </div>`,
       onCellClicked: (p: any) => {
         const action = (p.event as MouseEvent).composedPath()
-          .find((el: any) => el.dataset?.action)as HTMLElement | undefined;
+          .find((el: any) => el.dataset?.action) as HTMLElement | undefined;
         if (action?.dataset['action'] === 'qr') {
           this.router.navigate(['/teacher/events', p.data._id, 'qr'], { queryParams: this.qp });
         }
@@ -105,10 +155,7 @@ export class EventListComponent implements OnInit {
   ];
 
   gridOptions: GridOptions = {
-    defaultColDef: {
-      resizable: true,
-      sortable: true,
-    },
+    defaultColDef: { resizable: true, sortable: true },
     pagination: true,
     paginationPageSize: 20,
     rowHeight: 48,
@@ -125,11 +172,21 @@ export class EventListComponent implements OnInit {
 
   ngOnInit() {
     const c = this.ctx.context;
-    if (c) {
-      this.eventsService
-        .getEventsByPerson(c.schoolId, c.email, c.role)
-        .subscribe(events => (this.events = events));
+    if (!c) {
+      this.loading = false;
+      this.apiError = 'No user context found. Please access the app via your school link.';
+      return;
     }
+    this.eventsService.getEventsByPerson(c.schoolId, c.email, c.role).subscribe({
+      next: events => {
+        this.events = events;
+        this.loading = false;
+      },
+      error: err => {
+        this.loading = false;
+        this.apiError = err?.error?.message ?? err?.message ?? 'Failed to load events. Please try again.';
+      },
+    });
   }
 
   onGridReady(e: GridReadyEvent) {
@@ -141,16 +198,14 @@ export class EventListComponent implements OnInit {
   private adjustColumnsForScreenSize() {
     if (!this.gridApi) return;
     if (window.innerWidth < 768) {
-      // Mobile: hide extra columns
       this.gridApi.setColumnsVisible(['hourMode', 'pointsEnabled', 'createdAt'], false);
     } else {
       this.gridApi.setColumnsVisible(['hourMode', 'pointsEnabled', 'createdAt'], true);
     }
   }
 
-  onSearch(e: Event) {
-    const q = (e.target as HTMLInputElement).value;
-    this.gridApi?.setGridOption('quickFilterText', q);
+  onSearch() {
+    this.gridApi?.setGridOption('quickFilterText', this.searchCtrl.value ?? '');
   }
 
   onRowClick(e: any) {

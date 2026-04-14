@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { QrScannerComponent, ScannedPayload } from '../../../shared/components/qr-scanner/qr-scanner.component';
@@ -15,32 +17,66 @@ import { UrlContextService } from '../../../core/services/url-context.service';
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, AgGridAngular, MatDialogModule, MatSnackBarModule, HeaderComponent, HoursFormatPipe, QrScannerComponent],
+  imports: [
+    CommonModule,
+    AgGridAngular,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    HeaderComponent,
+    HoursFormatPipe,
+    QrScannerComponent,
+  ],
   template: `
     <app-header></app-header>
 
     <main class="flex flex-col h-[calc(100vh-64px)]">
-      <!-- Event summary -->
-      <div class="px-6 py-4 bg-white border-b border-gray-100" *ngIf="event">
-        <div class="flex items-center justify-between">
+
+      <!-- Loading state -->
+      <div *ngIf="loadingEvent" class="flex justify-center py-16">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+
+      <!-- Event load error -->
+      <div *ngIf="eventError" class="error-banner m-6">
+        <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
+        <div>
+          <p class="font-semibold">Could not load event</p>
+          <p class="mt-0.5 text-red-600">{{ eventError }}</p>
+        </div>
+      </div>
+
+      <!-- Event summary bar -->
+      <div *ngIf="event" class="px-6 py-4 bg-white border-b border-gray-100">
+        <div class="flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-4">
-            <button (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
-                    class="text-gray-400 hover:text-gray-600">← Events</button>
+            <button mat-icon-button
+                    (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
+                    aria-label="Back to events">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
             <div>
               <h2 class="text-xl font-bold text-gray-800">{{ event.eventName }}</h2>
-              <div class="flex gap-3 text-sm text-gray-500 mt-1">
+              <div class="flex gap-3 text-sm text-gray-500 mt-0.5">
                 <span>{{ event.qrMode === 'in-out' ? 'In/Out' : 'Single Scan' }}</span>
                 <span>•</span>
-                <span>{{ event.hourMode }}</span>
+                <span>{{ hourModeLabel }}</span>
                 <span *ngIf="event.pointsEnabled">• {{ event.pointsValue }}pts/scan</span>
               </div>
             </div>
           </div>
           <div class="flex gap-2">
-            <button (click)="router.navigate(['/teacher/events', eventId, 'qr'], { queryParams: qp })"
-                    class="btn-secondary text-sm">View QR Codes</button>
-            <button (click)="showScanner = !showScanner" class="btn-primary text-sm">
-              {{ showScanner ? 'Hide Scanner' : '📷 Scan Student' }}
+            <button mat-stroked-button
+                    (click)="router.navigate(['/teacher/events', eventId, 'qr'], { queryParams: qp })">
+              <mat-icon>qr_code_2</mat-icon>
+              View QR Codes
+            </button>
+            <button mat-raised-button
+                    (click)="showScanner = !showScanner"
+                    style="background-color: var(--color-primary); color: white;">
+              <mat-icon>{{ showScanner ? 'close' : 'qr_code_scanner' }}</mat-icon>
+              {{ showScanner ? 'Hide Scanner' : 'Scan Student' }}
             </button>
           </div>
         </div>
@@ -50,10 +86,14 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <div *ngIf="showScanner" class="px-6 py-4 bg-surface border-b border-gray-100 flex flex-col items-center gap-4">
         <p class="text-sm font-medium text-gray-600">Scan a student's QR badge to record attendance</p>
         <app-qr-scanner (scanned)="onStudentScanned($event)"></app-qr-scanner>
+        <div *ngIf="scanError" class="error-banner w-full max-w-md">
+          <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
+          <p>{{ scanError }}</p>
+        </div>
       </div>
 
       <!-- Stats bar -->
-      <div class="grid grid-cols-3 px-6 py-3 bg-gray-50 border-b border-gray-100 gap-4">
+      <div *ngIf="event" class="grid grid-cols-3 px-6 py-3 bg-gray-50 border-b border-gray-100 gap-4">
         <div class="text-center">
           <p class="text-2xl font-bold text-gray-800">{{ attendance.length }}</p>
           <p class="text-xs text-gray-500">Total Scans</p>
@@ -68,11 +108,21 @@ import { UrlContextService } from '../../../core/services/url-context.service';
         </div>
       </div>
 
+      <!-- Attendance load error -->
+      <div *ngIf="attendanceError" class="error-banner mx-6 mt-4">
+        <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
+        <div>
+          <p class="font-semibold">Could not load attendance records</p>
+          <p class="mt-0.5 text-red-600">{{ attendanceError }}</p>
+        </div>
+      </div>
+
       <!-- Attendance grid -->
-      <div class="flex-1 p-4">
+      <div *ngIf="event && !attendanceError" class="flex-1 p-4">
         <div class="flex justify-end mb-2">
-          <button (click)="exportCsv()" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-            ↓ Export CSV
+          <button mat-button (click)="exportCsv()" class="text-sm text-gray-500">
+            <mat-icon>download</mat-icon>
+            Export CSV
           </button>
         </div>
         <ag-grid-angular
@@ -83,6 +133,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
           (gridReady)="onGridReady($event)"
         ></ag-grid-angular>
       </div>
+
     </main>
   `,
 })
@@ -90,7 +141,11 @@ export class EventDetailComponent implements OnInit {
   event?: IEvent;
   attendance: IAttendance[] = [];
   eventId = '';
+  loadingEvent = true;
   showScanner = false;
+  eventError = '';
+  attendanceError = '';
+  scanError = '';
   private gridApi: any;
 
   get qp() {
@@ -104,6 +159,11 @@ export class EventDetailComponent implements OnInit {
 
   get totalHours(): number {
     return this.attendance.reduce((s, a) => s + (a.hours ?? 0), 0);
+  }
+
+  get hourModeLabel(): string {
+    const map: Record<string, string> = { 'in-out': 'In/Out', fixed: 'Fixed', volume: 'Volume', disabled: 'No Hours' };
+    return map[this.event?.hourMode ?? ''] ?? (this.event?.hourMode ?? '');
   }
 
   columnDefs: ColDef[] = [
@@ -159,12 +219,27 @@ export class EventDetailComponent implements OnInit {
 
   ngOnInit() {
     this.eventId = this.route.snapshot.paramMap.get('id') ?? '';
-    this.eventsService.getEventById(this.eventId).subscribe(e => (this.event = e));
+    this.eventsService.getEventById(this.eventId).subscribe({
+      next: e => {
+        this.event = e;
+        this.loadingEvent = false;
+      },
+      error: err => {
+        this.loadingEvent = false;
+        this.eventError = err?.error?.message ?? err?.message ?? 'Failed to load event details.';
+      },
+    });
     this.loadAttendance();
   }
 
   loadAttendance() {
-    this.attendanceService.getByEvent(this.eventId).subscribe(a => (this.attendance = a));
+    this.attendanceError = '';
+    this.attendanceService.getByEvent(this.eventId).subscribe({
+      next: a => (this.attendance = a),
+      error: err => {
+        this.attendanceError = err?.error?.message ?? err?.message ?? 'Failed to load attendance records.';
+      },
+    });
   }
 
   onGridReady(e: GridReadyEvent) {
@@ -179,8 +254,9 @@ export class EventDetailComponent implements OnInit {
   }
 
   onStudentScanned(payload: ScannedPayload) {
+    this.scanError = '';
     if (!payload.studentEmail) {
-      this.snack.open('Could not read student email from QR code.', 'Close', { duration: 3000 });
+      this.scanError = 'Could not read student email from QR code.';
       return;
     }
     const dto: SubmitAttendancePayload = {
@@ -200,7 +276,9 @@ export class EventDetailComponent implements OnInit {
         this.loadAttendance();
         this.showScanner = false;
       },
-      error: (err) => this.snack.open(err.error?.message ?? 'Scan failed', 'Close', { duration: 3000 }),
+      error: (err) => {
+        this.scanError = err?.error?.message ?? err?.message ?? 'Scan failed. Please try again.';
+      },
     });
   }
 }

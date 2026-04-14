@@ -1,8 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@use '@angular/material' as mat;
+@include mat.core();
 
-/* Default theme colors — overridden at runtime by ThemeService */
+/* ── Default palette — overridden at runtime by ThemeService via CSS vars ── */
 :root {
   --color-primary: #2c698d;
   --color-secondary: #272643;
@@ -11,6 +10,65 @@
   --color-background: #ffffff;
 }
 
+/* ── Map CSS vars → Angular Material MDC tokens ── */
+:root {
+  /* Outlined text fields */
+  --mdc-outlined-text-field-focus-outline-color: var(--color-primary);
+  --mdc-outlined-text-field-focus-label-text-color: var(--color-primary);
+  --mdc-outlined-text-field-caret-color: var(--color-primary);
+  --mdc-outlined-text-field-label-text-color: #4b5563;
+  --mdc-outlined-text-field-outline-color: #d1d5db;
+  --mdc-outlined-text-field-hover-outline-color: var(--color-primary);
+  --mdc-outlined-text-field-input-text-color: #111827;
+  --mdc-outlined-text-field-error-focus-outline-color: #ef4444;
+  --mdc-outlined-text-field-error-outline-color: #ef4444;
+  --mdc-outlined-text-field-error-label-text-color: #ef4444;
+  --mdc-outlined-text-field-error-caret-color: #ef4444;
+
+  /* Filled text fields (fallback) */
+  --mdc-filled-text-field-focus-active-indicator-color: var(--color-primary);
+  --mdc-filled-text-field-focus-label-text-color: var(--color-primary);
+  --mdc-filled-text-field-caret-color: var(--color-primary);
+
+  /* Select */
+  --mat-select-focused-arrow-color: var(--color-primary);
+  --mat-select-panel-background-color: #ffffff;
+
+  /* Checkbox */
+  --mdc-checkbox-selected-checkmark-color: #ffffff;
+  --mdc-checkbox-selected-focus-icon-color: var(--color-primary);
+  --mdc-checkbox-selected-hover-icon-color: var(--color-primary);
+  --mdc-checkbox-selected-icon-color: var(--color-primary);
+  --mdc-checkbox-selected-pressed-icon-color: var(--color-primary);
+
+  /* Slide toggle */
+  --mdc-switch-selected-track-color: var(--color-primary);
+  --mdc-switch-selected-handle-color: #ffffff;
+  --mdc-switch-selected-focus-track-color: var(--color-primary);
+  --mdc-switch-selected-hover-track-color: var(--color-primary);
+  --mdc-switch-selected-pressed-track-color: var(--color-primary);
+  --mdc-switch-selected-focus-handle-color: #ffffff;
+  --mdc-switch-selected-hover-handle-color: #ffffff;
+  --mdc-switch-selected-pressed-handle-color: #ffffff;
+
+  /* Raised button */
+  --mdc-protected-button-container-color: var(--color-primary);
+  --mdc-protected-button-label-text-color: #ffffff;
+  --mdc-filled-button-container-color: var(--color-primary);
+  --mdc-filled-button-label-text-color: #ffffff;
+
+  /* Snackbar */
+  --mdc-snackbar-container-color: #1f2937;
+  --mdc-snackbar-supporting-text-color: #ffffff;
+
+  /* Progress spinner */
+  --mdc-circular-progress-active-indicator-color: var(--color-primary);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   background-color: var(--color-background);
   color: #1a1a1a;
@@ -18,7 +76,7 @@ body {
   margin: 0;
 }
 
-/* AG Grid theme override */
+/* ── AG Grid theme ── */
 .ag-theme-alpine {
   --ag-header-background-color: var(--color-secondary);
   --ag-header-foreground-color: #ffffff;
@@ -28,14 +86,19 @@ body {
   --ag-font-size: 14px;
 }
 
-/* Utility classes */
+/* ── Utility classes ── */
 .btn-primary {
-  @apply bg-primary text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity;
+  background-color: var(--color-primary) !important;
+  @apply text-white px-4 py-2 rounded-lg font-medium transition-opacity cursor-pointer;
 }
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-secondary {
-  @apply bg-secondary text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity;
+  background-color: var(--color-secondary) !important;
+  @apply text-white px-4 py-2 rounded-lg font-medium transition-opacity cursor-pointer;
 }
+.btn-secondary:hover { opacity: 0.9; }
 
 .card {
   @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
@@ -44,5 +107,43 @@ body {
 .page-header {
   background-color: var(--color-secondary);
   @apply text-white px-6 py-4;
+  min-height: 64px;
 }
+
+/* ── Material form field overrides ── */
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-form-field .mat-mdc-text-field-wrapper {
+  border-radius: 8px !important;
+}
+
+/* Error banner */
+.error-banner {
+  @apply flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm;
+}
+
+/* Info banner */
+.info-banner {
+  @apply flex items-start gap-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-4 text-sm;
+}
+
+/* Selection card used for QR mode / hour mode pickers */
+.selection-card {
+  @apply p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white;
+}
+.selection-card.selected {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface);
+}
+.selection-card:not(.selected) {
+  @apply border-gray-200 hover:border-gray-300;
+}
+
+/* Section heading inside a card */
+.section-heading {
+  @apply text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4;
+}
+
 

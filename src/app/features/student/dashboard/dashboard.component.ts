@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridOptions } from 'ag-grid-community';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { HoursFormatPipe } from '../../../shared/pipes/hours-format.pipe';
 import { AttendanceService, AttendanceSummary, IAttendance } from '../../../core/services/attendance.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { ThemeService } from '../../../core/theme/theme.service';
-import { EventsService } from '../../../core/services/events.service';
 
 interface ProgressBar {
   label: string;
@@ -20,87 +21,126 @@ interface ProgressBar {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AgGridAngular, HeaderComponent, HoursFormatPipe],
+  imports: [CommonModule, AgGridAngular, MatIconModule, MatProgressSpinnerModule, HeaderComponent, HoursFormatPipe],
   template: `
     <app-header></app-header>
 
-    <main class="max-w-5xl mx-auto p-6 space-y-6">
+    <main class="max-w-5xl mx-auto p-4 pb-12 space-y-6">
 
-      <!-- Student identity -->
-      <div class="card flex items-center gap-4">
-        <div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-             style="background-color: var(--color-primary)">
-          {{ initials }}
-        </div>
+      <!-- Loading -->
+      <div *ngIf="loading" class="flex justify-center py-16">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+
+      <!-- No context error -->
+      <div *ngIf="!loading && !ctx.email" class="error-banner mt-6">
+        <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
         <div>
-          <h2 class="text-xl font-bold text-gray-800">{{ displayName }}</h2>
-          <p class="text-sm text-gray-500">{{ ctx.email }}</p>
-          <p *ngIf="summary && summary.totalPoints > 0"
-             class="text-sm font-semibold mt-1" style="color: var(--color-primary)">
-            {{ summary!.totalPoints }} points earned
-          </p>
-        </div>
-        <div class="ml-auto text-right" *ngIf="summary">
-          <p class="text-3xl font-bold text-gray-800">{{ summary.totalHours | hoursFormat }}</p>
-          <p class="text-xs text-gray-500">Total hours</p>
+          <p class="font-semibold">No student context found</p>
+          <p class="mt-0.5 text-red-600">Please access this page via your school link.</p>
         </div>
       </div>
 
-      <!-- Hours by type progress bars -->
-      <div *ngIf="progressBars.length > 0" class="card space-y-5">
-        <h3 class="font-semibold text-gray-700">Progress Towards Targets</h3>
-        <div *ngFor="let bar of progressBars" class="space-y-1">
-          <div class="flex justify-between text-sm">
-            <span class="font-medium text-gray-700">{{ bar.label }}</span>
-            <span class="text-gray-500">
-              {{ bar.achieved | hoursFormat }} / {{ bar.target | hoursFormat }}
-            </span>
+      <!-- API error -->
+      <div *ngIf="!loading && apiError" class="error-banner mt-6">
+        <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
+        <div>
+          <p class="font-semibold">Could not load dashboard</p>
+          <p class="mt-0.5 text-red-600">{{ apiError }}</p>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!loading && ctx.email">
+
+        <!-- Student identity card -->
+        <div class="card flex items-center gap-4 flex-wrap mt-6">
+          <div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0"
+               style="background-color: var(--color-primary)">
+            {{ initials }}
           </div>
-          <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-500"
-                 [style.width.%]="bar.percent"
-                 [style.background-color]="bar.percent >= 100 ? '#22c55e' : 'var(--color-primary)'">
+          <div class="flex-1 min-w-0">
+            <h2 class="text-xl font-bold text-gray-800">{{ displayName }}</h2>
+            <p class="text-sm text-gray-500">{{ ctx.email }}</p>
+            <p *ngIf="summary && summary.totalPoints > 0"
+               class="text-sm font-semibold mt-1" style="color: var(--color-primary)">
+              {{ summary.totalPoints }} points earned
+            </p>
+          </div>
+          <div class="text-right shrink-0" *ngIf="summary">
+            <p class="text-3xl font-bold text-gray-800">{{ summary.totalHours | hoursFormat }}</p>
+            <p class="text-xs text-gray-500">Total hours</p>
+          </div>
+        </div>
+
+        <!-- Progress bars -->
+        <div *ngIf="progressBars.length > 0" class="card space-y-5">
+          <h3 class="font-semibold text-gray-700">Progress Towards Targets</h3>
+          <div *ngFor="let bar of progressBars" class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <span class="font-medium text-gray-700">{{ bar.label }}</span>
+              <span class="text-gray-500">
+                {{ bar.achieved | hoursFormat }} / {{ bar.target | hoursFormat }}
+              </span>
+            </div>
+            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500"
+                   [style.width.%]="bar.percent"
+                   [style.background-color]="bar.percent >= 100 ? '#22c55e' : 'var(--color-primary)'">
+              </div>
+            </div>
+            <p *ngIf="bar.percent >= 100" class="text-xs text-green-600 font-medium">Target met!</p>
+          </div>
+        </div>
+
+        <!-- Hours breakdown -->
+        <div *ngIf="summary" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="card" *ngIf="hoursByTypeEntries.length">
+            <h3 class="font-semibold text-gray-700 mb-4">Hours by Type</h3>
+            <div *ngFor="let entry of hoursByTypeEntries"
+                 class="flex justify-between text-sm py-2 border-b border-gray-50 last:border-0">
+              <span class="text-gray-600">{{ entry[0] }}</span>
+              <span class="font-medium text-gray-800">{{ entry[1] | hoursFormat }}</span>
             </div>
           </div>
-          <p *ngIf="bar.percent >= 100" class="text-xs text-green-600 font-medium">✓ Target met!</p>
-        </div>
-      </div>
-
-      <!-- Hours breakdown -->
-      <div *ngIf="summary" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="card" *ngIf="hoursByTypeEntries.length">
-          <h3 class="font-semibold text-gray-700 mb-4">Hours by Type</h3>
-          <div *ngFor="let entry of hoursByTypeEntries" class="flex justify-between text-sm py-1 border-b border-gray-50 last:border-0">
-            <span class="text-gray-600">{{ entry[0] }}</span>
-            <span class="font-medium text-gray-800">{{ entry[1] | hoursFormat }}</span>
+          <div class="card" *ngIf="hoursByCatEntries.length">
+            <h3 class="font-semibold text-gray-700 mb-4">Hours by Category</h3>
+            <div *ngFor="let entry of hoursByCatEntries"
+                 class="flex justify-between text-sm py-2 border-b border-gray-50 last:border-0">
+              <span class="text-gray-600">{{ entry[0] }}</span>
+              <span class="font-medium text-gray-800">{{ entry[1] | hoursFormat }}</span>
+            </div>
           </div>
         </div>
-        <div class="card" *ngIf="hoursByCatEntries.length">
-          <h3 class="font-semibold text-gray-700 mb-4">Hours by Category</h3>
-          <div *ngFor="let entry of hoursByCatEntries" class="flex justify-between text-sm py-1 border-b border-gray-50 last:border-0">
-            <span class="text-gray-600">{{ entry[0] }}</span>
-            <span class="font-medium text-gray-800">{{ entry[1] | hoursFormat }}</span>
+
+        <!-- No summary yet -->
+        <div *ngIf="!summary && !apiError" class="info-banner">
+          <mat-icon class="shrink-0 text-blue-500">info</mat-icon>
+          <p>No attendance records found yet. Scan a QR code to get started!</p>
+        </div>
+
+        <!-- Attendance records grid -->
+        <div *ngIf="attendance.length > 0" class="card space-y-3">
+          <h3 class="font-semibold text-gray-700">Attendance Records</h3>
+          <div style="height: 400px;">
+            <ag-grid-angular
+              class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden"
+              [rowData]="attendance"
+              [columnDefs]="columnDefs"
+              [gridOptions]="gridOptions"
+            ></ag-grid-angular>
           </div>
         </div>
-      </div>
 
-      <!-- Attendance records -->
-      <div class="card space-y-3">
-        <h3 class="font-semibold text-gray-700">Attendance Records</h3>
-        <div style="height: 400px;">
-          <ag-grid-angular
-            class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden"
-            [rowData]="attendance"
-            [columnDefs]="columnDefs"
-            [gridOptions]="gridOptions"
-          ></ag-grid-angular>
+        <!-- Attendance load error -->
+        <div *ngIf="attendanceError" class="error-banner">
+          <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
+          <div>
+            <p class="font-semibold">Could not load attendance history</p>
+            <p class="mt-0.5 text-red-600">{{ attendanceError }}</p>
+          </div>
         </div>
-      </div>
 
-      <!-- Loading spinner -->
-      <div *ngIf="loading" class="flex justify-center py-12">
-        <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
+      </ng-container>
     </main>
   `,
 })
@@ -109,6 +149,8 @@ export class DashboardComponent implements OnInit {
   summary?: AttendanceSummary;
   attendance: IAttendance[] = [];
   progressBars: ProgressBar[] = [];
+  apiError = '';
+  attendanceError = '';
 
   get displayName(): string {
     const c = this.ctx.context;
@@ -135,7 +177,7 @@ export class DashboardComponent implements OnInit {
     { field: 'eventId', headerName: 'Event', flex: 2, filter: 'agTextColumnFilter' },
     {
       field: 'timeIn', headerName: 'Date', width: 130,
-      valueFormatter: (p: any) => new Date(p.value).toLocaleDateString(),
+      valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : '—',
       sort: 'desc',
     },
     {
@@ -170,7 +212,6 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Capture URL context if coming from deep link
     const params = this.route.snapshot.queryParams;
     this.ctx.captureFromUrl(params);
 
@@ -184,14 +225,35 @@ export class DashboardComponent implements OnInit {
 
     this.theme.loadAndApply(schoolId);
 
-    this.attendanceService.getSummary(email, schoolId).subscribe(s => {
-      this.summary = s;
-      this.buildProgressBars(s);
+    let summaryDone = false;
+    let attendanceDone = false;
+    const checkDone = () => { if (summaryDone && attendanceDone) this.loading = false; };
+
+    this.attendanceService.getSummary(email, schoolId).subscribe({
+      next: s => {
+        this.summary = s;
+        this.buildProgressBars(s);
+        summaryDone = true;
+        checkDone();
+      },
+      error: err => {
+        this.apiError = err?.error?.message ?? err?.message ?? 'Failed to load summary data.';
+        summaryDone = true;
+        checkDone();
+      },
     });
 
-    this.attendanceService.getByStudent(email).subscribe(records => {
-      this.attendance = records;
-      this.loading = false;
+    this.attendanceService.getByStudent(email).subscribe({
+      next: records => {
+        this.attendance = records;
+        attendanceDone = true;
+        checkDone();
+      },
+      error: err => {
+        this.attendanceError = err?.error?.message ?? err?.message ?? 'Failed to load attendance history.';
+        attendanceDone = true;
+        checkDone();
+      },
     });
   }
 
