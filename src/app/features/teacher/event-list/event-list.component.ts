@@ -274,8 +274,8 @@ export class EventListComponent implements OnInit, OnDestroy {
     this.gridOptions = {
       defaultColDef: { resizable: true, sortable: true },
       pagination: true,
-      paginationPageSize: 20,
-      rowHeight: 52,
+      paginationPageSize: 25,
+      rowHeight: 38,
       rowGroupPanelShow: 'never',
       pivotPanelShow:    'never',
 
@@ -289,8 +289,7 @@ export class EventListComponent implements OnInit, OnDestroy {
 
       // ── Master / Detail ────────────────────────────────────────────────
       masterDetail: true,
-      detailRowHeight: 340,
-      detailRowAutoHeight: false,
+      detailRowAutoHeight: true,      // expands to fit paginated sub-grid
       embedFullWidthRows: true,
       isRowMaster: () => true,
 
@@ -321,9 +320,11 @@ export class EventListComponent implements OnInit, OnDestroy {
         },
 
         detailGridOptions: {
-          rowHeight: 42,
+          rowHeight: 34,
           defaultColDef: { resizable: true, sortable: true },
           suppressCellFocus: true,
+          pagination: true,
+          paginationPageSize: 10,
           rowGroupPanelShow: 'never',
           pivotPanelShow:    'never',
 

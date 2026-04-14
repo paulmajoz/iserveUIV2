@@ -97,11 +97,13 @@ body {
 .ag-theme-alpine {
   --ag-header-background-color:        var(--color-secondary);
   --ag-header-foreground-color:        #ffffff;
-  --ag-row-hover-color:                #f9fafb;   /* fixed light grey */
-  --ag-selected-row-background-color:  #eff6ff;   /* fixed light blue */
+  --ag-header-height:                  38px;
+  --ag-row-hover-color:                #f9fafb;
+  --ag-selected-row-background-color:  #eff6ff;
   --ag-border-color:                   #e5e7eb;
-  --ag-font-size:                      14px;
+  --ag-font-size:                      13px;
   --ag-background-color:               #ffffff;
+  --ag-cell-horizontal-padding:        12px;
 }
 
 /* ── Utility classes ── */

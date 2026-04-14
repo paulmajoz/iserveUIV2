@@ -213,7 +213,7 @@ export class EventDetailComponent implements OnInit {
     defaultColDef: { resizable: true, sortable: true },
     pagination: true,
     paginationPageSize: 25,
-    rowHeight: 48,
+    rowHeight: 38,
     rowGroupPanelShow: 'never',
     pivotPanelShow:    'never',
     suppressRowClickSelection: true,

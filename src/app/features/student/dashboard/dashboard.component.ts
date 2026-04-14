@@ -207,7 +207,7 @@ export class DashboardComponent implements OnInit {
     defaultColDef: { resizable: true, sortable: true },
     pagination: true,
     paginationPageSize: 15,
-    rowHeight: 44,
+    rowHeight: 38,
     rowGroupPanelShow: 'never',
     pivotPanelShow:    'never',
   };
