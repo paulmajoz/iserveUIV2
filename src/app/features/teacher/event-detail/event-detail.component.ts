@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
@@ -20,7 +19,6 @@ import { UrlContextService } from '../../../core/services/url-context.service';
   imports: [
     CommonModule,
     AgGridAngular,
-    MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -51,8 +49,9 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <div *ngIf="event" class="px-6 py-4 bg-white border-b border-gray-100">
         <div class="flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-4">
-            <button mat-icon-button
+            <button type="button"
                     (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
+                    class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                     aria-label="Back to events">
               <mat-icon>arrow_back</mat-icon>
             </button>
@@ -67,15 +66,12 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             </div>
           </div>
           <div class="flex gap-2">
-            <button mat-stroked-button
+            <button type="button" class="btn-secondary !px-4 !py-2 !text-sm"
                     (click)="router.navigate(['/teacher/events', eventId, 'qr'], { queryParams: qp })">
-              <mat-icon>qr_code_2</mat-icon>
               View QR Codes
             </button>
-            <button mat-raised-button
-                    (click)="showScanner = !showScanner"
-                    style="background-color: var(--color-primary); color: white;">
-              <mat-icon>{{ showScanner ? 'close' : 'qr_code_scanner' }}</mat-icon>
+            <button type="button" class="btn-primary !px-4 !py-2 !text-sm"
+                    (click)="showScanner = !showScanner">
               {{ showScanner ? 'Hide Scanner' : 'Scan Student' }}
             </button>
           </div>
@@ -120,8 +116,9 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <!-- Attendance grid -->
       <div *ngIf="event && !attendanceError" class="flex-1 p-4">
         <div class="flex justify-end mb-2">
-          <button mat-button (click)="exportCsv()" class="text-sm text-gray-500">
-            <mat-icon>download</mat-icon>
+          <button type="button" (click)="exportCsv()"
+                  class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <mat-icon class="!text-base !w-4 !h-4">download</mat-icon>
             Export CSV
           </button>
         </div>

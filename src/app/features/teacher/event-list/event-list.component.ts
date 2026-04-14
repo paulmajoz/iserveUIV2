@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AgGridAngular } from 'ag-grid-angular';
@@ -23,7 +22,6 @@ if (environment.agGridLicense) {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     AgGridAngular,

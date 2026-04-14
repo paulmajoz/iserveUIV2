@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
@@ -15,7 +14,6 @@ import { UrlContextService } from '../../../core/services/url-context.service';
   standalone: true,
   imports: [
     CommonModule,
-    MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -29,8 +27,9 @@ import { UrlContextService } from '../../../core/services/url-context.service';
 
       <!-- Back + title -->
       <div class="flex items-center gap-3 my-6">
-        <button mat-icon-button
+        <button type="button"
                 (click)="router.navigate(['/teacher/events', eventId], { queryParams: qp })"
+                class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                 aria-label="Back to event">
           <mat-icon>arrow_back</mat-icon>
         </button>

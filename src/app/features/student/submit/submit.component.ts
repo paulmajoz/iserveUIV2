@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EventsService, IEvent } from '../../../core/services/events.service';
@@ -19,7 +18,6 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
   ],
@@ -154,13 +152,11 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <p>{{ submitError }}</p>
             </div>
 
-            <button mat-raised-button (click)="confirmIn()"
+            <button type="button" (click)="confirmIn()"
                     [disabled]="submitting || optionalForm.invalid"
-                    class="w-full !py-4 !text-base !font-semibold"
-                    style="background-color: var(--color-primary); color: white;">
+                    class="btn-primary w-full !py-4 !text-base !font-semibold">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
-                <mat-icon *ngIf="!submitting">how_to_reg</mat-icon>
                 {{ submitting ? 'Signing in...' : 'Confirm Sign In' }}
               </span>
             </button>
@@ -202,12 +198,12 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <p>{{ submitError }}</p>
             </div>
 
-            <button mat-raised-button (click)="confirmOut()"
+            <button type="button" (click)="confirmOut()"
                     [disabled]="submitting"
-                    class="w-full !py-4 !text-base !font-semibold !bg-orange-500 !text-white">
+                    class="w-full py-4 text-base font-semibold rounded-lg text-white transition-opacity cursor-pointer disabled:opacity-50"
+                    style="background-color: #f97316;">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
-                <mat-icon *ngIf="!submitting">logout</mat-icon>
                 {{ submitting ? 'Signing out...' : 'Confirm Sign Out' }}
               </span>
             </button>

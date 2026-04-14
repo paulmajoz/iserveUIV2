@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UrlContextService } from '../../core/services/url-context.service';
 import { ThemeService } from '../../core/theme/theme.service';
@@ -9,7 +8,7 @@ import { ThemeService } from '../../core/theme/theme.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule],
   template: `
     <div class="min-h-screen flex flex-col items-center justify-center p-6"
          style="background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%)">
@@ -30,25 +29,22 @@ import { ThemeService } from '../../core/theme/theme.service';
 
         <!-- Teacher actions -->
         <div *ngIf="ctx.isTeacher()" class="mt-8 space-y-3">
-          <button mat-raised-button class="w-full !py-3 !text-base"
-                  style="background: white; color: var(--color-secondary);"
-                  (click)="goToEvents()">
-            <mat-icon>event</mat-icon>
+          <button type="button" (click)="goToEvents()"
+                  class="w-full py-3 text-base font-semibold rounded-lg transition-opacity hover:opacity-90 cursor-pointer"
+                  style="background: white; color: var(--color-secondary);">
             View Events
           </button>
-          <button mat-stroked-button class="w-full !py-3 !text-base !text-white !border-white"
-                  (click)="goToCreate()">
-            <mat-icon>add</mat-icon>
+          <button type="button" (click)="goToCreate()"
+                  class="w-full py-3 text-base font-semibold rounded-lg text-white border-2 border-white transition-colors hover:bg-white/10 cursor-pointer">
             New Event
           </button>
         </div>
 
         <!-- Student actions -->
         <div *ngIf="ctx.isStudent()" class="mt-8">
-          <button mat-raised-button class="w-full !py-3 !text-base"
-                  style="background: white; color: var(--color-secondary);"
-                  (click)="goToDashboard()">
-            <mat-icon>dashboard</mat-icon>
+          <button type="button" (click)="goToDashboard()"
+                  class="w-full py-3 text-base font-semibold rounded-lg transition-opacity hover:opacity-90 cursor-pointer"
+                  style="background: white; color: var(--color-secondary);">
             My Dashboard
           </button>
         </div>
