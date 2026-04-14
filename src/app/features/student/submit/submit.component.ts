@@ -24,7 +24,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
     MatProgressSpinnerModule,
   ],
   template: `
-    <div class="min-h-screen flex flex-col" style="background-color: var(--color-background)">
+    <div class="min-h-screen flex flex-col bg-gray-100">
 
       <!-- ── Header bar ───────────────────────────── -->
       <div class="page-header text-center py-5 px-4">

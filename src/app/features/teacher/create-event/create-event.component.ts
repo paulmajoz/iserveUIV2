@@ -115,7 +115,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
                     class="rounded-xl border px-3 py-2.5 text-left transition-all duration-150"
                     [class.border-gray-200]="form.get('hourMode')?.value !== mode.value"
                     [style.border-color]="form.get('hourMode')?.value === mode.value ? 'var(--color-primary)' : null"
-                    [style.background]="form.get('hourMode')?.value === mode.value ? 'var(--color-surface)' : 'white'"
+                    [style.background]="form.get('hourMode')?.value === mode.value ? 'color-mix(in srgb, var(--color-primary) 10%, white)' : 'white'"
                     (click)="form.get('hourMode')?.setValue(mode.value)">
               <p class="text-sm font-semibold text-gray-800">{{ mode.label }}</p>
               <p class="text-xs text-gray-400 mt-0.5">{{ mode.desc }}</p>

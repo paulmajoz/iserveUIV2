@@ -1,66 +1,81 @@
 /* Angular Material prebuilt theme loaded via angular.json styles[] */
 
-/* ── Default palette — overridden at runtime by ThemeService via CSS vars ── */
+/*
+ * ══ THEMING PHILOSOPHY ══════════════════════════════════════════════════════
+ *
+ *  School theme colours ( --color-primary / --color-secondary ) ONLY apply to:
+ *    • Header background          (.page-header)
+ *    • Buttons                    ([style.background-color])
+ *    • Toggle-on state            (.toggle-track.on)
+ *    • Segmented control active   (.seg-btn.active)
+ *    • Selection-tile border      ([style.border-color])
+ *    • Progress bars / avatars    ([style.background-color])
+ *    • Input focus ring           (.field-input:focus)
+ *    • Section labels colour      (.form-section-label)
+ *    • AG Grid header             (--ag-header-background-color)
+ *
+ *  Everything else uses FIXED neutral colours so the app always looks clean
+ *  regardless of what colours the school has stored in the database.
+ *    • Page background  →  #f3f4f6  (neutral light grey)
+ *    • Cards / forms    →  #ffffff  (white)
+ *    • Borders          →  #e5e7eb / #d1d5db
+ *    • Text             →  #111827 / #4b5563
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ── Default palette — overridden at runtime by ThemeService ── */
 :root {
-  --color-primary: #2c698d;
+  --color-primary:   #2c698d;
   --color-secondary: #272643;
-  --color-accent: #bae8e8;
-  --color-surface: #e3f6f5;
-  --color-background: #ffffff;
 }
 
-/* ── Map CSS vars → Angular Material MDC tokens ── */
+/* ── Material MDC token overrides — tie to school primary colour ── */
 :root {
-  /* Outlined text fields */
-  --mdc-outlined-text-field-focus-outline-color: var(--color-primary);
-  --mdc-outlined-text-field-focus-label-text-color: var(--color-primary);
-  --mdc-outlined-text-field-caret-color: var(--color-primary);
-  --mdc-outlined-text-field-label-text-color: #4b5563;
-  --mdc-outlined-text-field-outline-color: #d1d5db;
-  --mdc-outlined-text-field-hover-outline-color: var(--color-primary);
-  --mdc-outlined-text-field-input-text-color: #111827;
+  /* Focus / caret */
+  --mdc-outlined-text-field-focus-outline-color:      var(--color-primary);
+  --mdc-outlined-text-field-focus-label-text-color:   var(--color-primary);
+  --mdc-outlined-text-field-caret-color:              var(--color-primary);
+  --mdc-outlined-text-field-hover-outline-color:      var(--color-primary);
+  /* Normal state — neutral fixed */
+  --mdc-outlined-text-field-label-text-color:         #6b7280;
+  --mdc-outlined-text-field-outline-color:            #d1d5db;
+  --mdc-outlined-text-field-input-text-color:         #111827;
+  /* Error state */
   --mdc-outlined-text-field-error-focus-outline-color: #ef4444;
-  --mdc-outlined-text-field-error-outline-color: #ef4444;
-  --mdc-outlined-text-field-error-label-text-color: #ef4444;
-  --mdc-outlined-text-field-error-caret-color: #ef4444;
-
-  /* Filled text fields (fallback) */
+  --mdc-outlined-text-field-error-outline-color:       #ef4444;
+  --mdc-outlined-text-field-error-label-text-color:    #ef4444;
+  --mdc-outlined-text-field-error-caret-color:         #ef4444;
+  /* Filled fallback */
   --mdc-filled-text-field-focus-active-indicator-color: var(--color-primary);
-  --mdc-filled-text-field-focus-label-text-color: var(--color-primary);
-  --mdc-filled-text-field-caret-color: var(--color-primary);
-
+  --mdc-filled-text-field-focus-label-text-color:       var(--color-primary);
+  --mdc-filled-text-field-caret-color:                  var(--color-primary);
   /* Select */
-  --mat-select-focused-arrow-color: var(--color-primary);
+  --mat-select-focused-arrow-color:    var(--color-primary);
   --mat-select-panel-background-color: #ffffff;
-
   /* Checkbox */
-  --mdc-checkbox-selected-checkmark-color: #ffffff;
-  --mdc-checkbox-selected-focus-icon-color: var(--color-primary);
-  --mdc-checkbox-selected-hover-icon-color: var(--color-primary);
-  --mdc-checkbox-selected-icon-color: var(--color-primary);
-  --mdc-checkbox-selected-pressed-icon-color: var(--color-primary);
-
+  --mdc-checkbox-selected-checkmark-color:      #ffffff;
+  --mdc-checkbox-selected-focus-icon-color:     var(--color-primary);
+  --mdc-checkbox-selected-hover-icon-color:     var(--color-primary);
+  --mdc-checkbox-selected-icon-color:           var(--color-primary);
+  --mdc-checkbox-selected-pressed-icon-color:   var(--color-primary);
   /* Slide toggle */
-  --mdc-switch-selected-track-color: var(--color-primary);
-  --mdc-switch-selected-handle-color: #ffffff;
-  --mdc-switch-selected-focus-track-color: var(--color-primary);
-  --mdc-switch-selected-hover-track-color: var(--color-primary);
-  --mdc-switch-selected-pressed-track-color: var(--color-primary);
-  --mdc-switch-selected-focus-handle-color: #ffffff;
-  --mdc-switch-selected-hover-handle-color: #ffffff;
-  --mdc-switch-selected-pressed-handle-color: #ffffff;
-
-  /* Raised button */
+  --mdc-switch-selected-track-color:            var(--color-primary);
+  --mdc-switch-selected-handle-color:           #ffffff;
+  --mdc-switch-selected-focus-track-color:      var(--color-primary);
+  --mdc-switch-selected-hover-track-color:      var(--color-primary);
+  --mdc-switch-selected-pressed-track-color:    var(--color-primary);
+  --mdc-switch-selected-focus-handle-color:     #ffffff;
+  --mdc-switch-selected-hover-handle-color:     #ffffff;
+  --mdc-switch-selected-pressed-handle-color:   #ffffff;
+  /* Buttons */
   --mdc-protected-button-container-color: var(--color-primary);
   --mdc-protected-button-label-text-color: #ffffff;
   --mdc-filled-button-container-color: var(--color-primary);
   --mdc-filled-button-label-text-color: #ffffff;
-
-  /* Snackbar */
-  --mdc-snackbar-container-color: #1f2937;
+  /* Snackbar — fixed dark */
+  --mdc-snackbar-container-color:       #1f2937;
   --mdc-snackbar-supporting-text-color: #ffffff;
-
-  /* Progress spinner */
+  /* Spinner */
   --mdc-circular-progress-active-indicator-color: var(--color-primary);
 }
 
@@ -68,21 +83,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Base ── */
 body {
-  background-color: var(--color-background);
-  color: #1a1a1a;
+  background-color: #f3f4f6;   /* FIXED — never school-themed */
+  color: #111827;
   font-family: 'Inter', sans-serif;
   margin: 0;
 }
 
-/* ── AG Grid theme ── */
+/* ── AG Grid — header uses school secondary; rows use fixed neutrals ── */
 .ag-theme-alpine {
-  --ag-header-background-color: var(--color-secondary);
-  --ag-header-foreground-color: #ffffff;
-  --ag-row-hover-color: var(--color-surface);
-  --ag-selected-row-background-color: var(--color-accent);
-  --ag-border-color: #e5e7eb;
-  --ag-font-size: 14px;
+  --ag-header-background-color:        var(--color-secondary);
+  --ag-header-foreground-color:        #ffffff;
+  --ag-row-hover-color:                #f9fafb;   /* fixed light grey */
+  --ag-selected-row-background-color:  #eff6ff;   /* fixed light blue */
+  --ag-border-color:                   #e5e7eb;
+  --ag-font-size:                      14px;
+  --ag-background-color:               #ffffff;
 }
 
 /* ── Utility classes ── */
@@ -90,7 +107,7 @@ body {
   background-color: var(--color-primary) !important;
   @apply text-white px-4 py-2 rounded-lg font-medium transition-opacity cursor-pointer;
 }
-.btn-primary:hover { opacity: 0.9; }
+.btn-primary:hover   { opacity: 0.9; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-secondary {
@@ -99,41 +116,38 @@ body {
 }
 .btn-secondary:hover { opacity: 0.9; }
 
+/* Card — always white */
 .card {
   @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
 }
 
+/* Header — school secondary colour */
 .page-header {
   background-color: var(--color-secondary);
   @apply text-white px-6 py-4;
-  min-height: 64px;
+  min-height: 56px;
 }
 
-/* ── Material form field overrides (used where mat-form-field is still needed) ── */
-.mat-mdc-form-field {
-  width: 100%;
-}
-.mat-mdc-form-field .mat-mdc-text-field-wrapper {
-  border-radius: 8px !important;
-}
+/* ── Material form field overrides ── */
+.mat-mdc-form-field { width: 100%; }
+.mat-mdc-form-field .mat-mdc-text-field-wrapper { border-radius: 8px !important; }
 
-/* ─────────────────────────────────────────────
-   Native form field utilities  (old-style forms)
-   label → .field-label
-   input / select / textarea → .field-input
-   error paragraph → .field-error
-   section heading → .form-section-label
-   ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   Native form field utilities
+   ──────────────────────────────────────────────────────────── */
 
+/* Section label — school secondary colour (subtle branded accent) */
 .form-section-label {
   @apply block text-xs font-semibold uppercase tracking-wider mb-3;
   color: var(--color-secondary);
 }
 
+/* Field label — fixed neutral */
 .field-label {
   @apply block text-sm font-medium text-gray-700 mb-1.5;
 }
 
+/* Input / select / textarea — white bg, neutral border */
 .field-input {
   @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900
          transition-colors duration-150;
@@ -144,10 +158,10 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 .field-input.ng-invalid.ng-touched {
-  @apply border-red-400;
-  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.25);
+  border-color: #f87171;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.2);
 }
-/* native select gets a custom chevron */
+/* Native <select> chevron */
 select.field-input {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3E%3Cpath d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");
@@ -156,76 +170,58 @@ select.field-input {
   background-size: 1rem;
   padding-right: 2.5rem;
 }
-
 textarea.field-input {
   resize: vertical;
   min-height: 88px;
 }
 
-.field-error {
-  @apply mt-1 text-xs text-red-600;
-}
+.field-error { @apply mt-1 text-xs text-red-600; }
+.field-hint  { @apply mt-1 text-xs text-gray-400; }
 
-.field-hint {
-  @apply mt-1 text-xs text-gray-400;
-}
-
-/* CSS toggle button (used in forms instead of mat-slide-toggle) */
+/* CSS toggle — off: fixed grey; on: school primary */
 .toggle-track {
   @apply relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 cursor-pointer;
   background-color: #d1d5db;
 }
-.toggle-track.on {
-  background-color: var(--color-primary);
-}
+.toggle-track.on { background-color: var(--color-primary); }
 .toggle-thumb {
   @apply absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200;
   left: 2px;
 }
-.toggle-track.on .toggle-thumb {
-  left: 22px;
-}
+.toggle-track.on .toggle-thumb { left: 22px; }
 
-/* Segmented control (QR mode / hour mode) */
+/* Segmented pill control — inactive: white/grey; active: school primary */
 .seg-control {
   @apply flex rounded-xl overflow-hidden border border-gray-200 text-sm font-semibold;
 }
 .seg-btn {
-  @apply flex-1 py-2.5 text-center transition-colors duration-150 text-gray-500 bg-white;
+  @apply flex-1 py-2.5 text-center transition-colors duration-150 bg-white;
+  color: #6b7280;
 }
-.seg-btn + .seg-btn {
-  @apply border-l border-gray-200;
-}
-.seg-btn.active {
-  color: white;
-  background-color: var(--color-primary);
-}
+.seg-btn + .seg-btn { @apply border-l border-gray-200; }
+.seg-btn.active { color: #ffffff; background-color: var(--color-primary); }
 
-/* Error banner */
-.error-banner {
-  @apply flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm;
-}
-
-/* Info banner */
-.info-banner {
-  @apply flex items-start gap-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-4 text-sm;
-}
-
-/* Selection card used for QR mode / hour mode pickers */
+/* Selection tile (hour-mode grid) — border accent from school primary */
 .selection-card {
   @apply p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-white;
 }
 .selection-card.selected {
   border-color: var(--color-primary);
-  background-color: var(--color-surface);
+  background-color: color-mix(in srgb, var(--color-primary) 8%, white);
 }
 .selection-card:not(.selected) {
   @apply border-gray-200 hover:border-gray-300;
 }
 
-/* Section heading inside a card */
+/* Section heading */
 .section-heading {
   @apply text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4;
 }
 
-
+/* Banners — fixed semantic colours, never themed */
+.error-banner {
+  @apply flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm;
+}
+.info-banner {
+  @apply flex items-start gap-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-4 text-sm;
+}
