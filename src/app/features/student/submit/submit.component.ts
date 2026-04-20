@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EventsService, IEvent } from '../../../core/services/events.service';
 import { AttendanceService, IAttendance, SubmitAttendancePayload } from '../../../core/services/attendance.service';
@@ -19,6 +22,9 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
     CommonModule,
     ReactiveFormsModule,
     MatIconModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatProgressSpinnerModule,
   ],
   template: `
@@ -101,48 +107,38 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <form [formGroup]="optionalForm" class="bg-white rounded-2xl shadow-sm p-5 space-y-4" novalidate>
                 <p class="form-section-label">Additional Information</p>
 
-                <div *ngIf="event?.captureOptions?.hasDescription">
-                  <label class="field-label">
-                    Description <span class="text-red-500">*</span>
-                  </label>
-                  <textarea formControlName="description" rows="3"
-                            placeholder="Describe your contribution..."
-                            class="field-input"></textarea>
-                  <p *ngIf="optionalForm.get('description')?.invalid && optionalForm.get('description')?.touched"
-                     class="field-error">A description is required for this event.</p>
-                  <p class="field-hint">Tell us what you did</p>
-                </div>
+                <mat-form-field *ngIf="event?.captureOptions?.hasDescription" appearance="outline" class="w-full">
+                  <mat-label>Description</mat-label>
+                  <textarea matInput formControlName="description" rows="3"
+                            placeholder="Describe your contribution..."></textarea>
+                  <mat-hint>Tell us what you did</mat-hint>
+                  <mat-error *ngIf="optionalForm.get('description')?.invalid">
+                    A description is required for this event.
+                  </mat-error>
+                </mat-form-field>
 
-                <div *ngIf="event?.captureOptions?.hasReflection">
-                  <label class="field-label">
-                    Reflection <span class="text-red-500">*</span>
-                  </label>
-                  <textarea formControlName="reflection" rows="3"
-                            placeholder="Reflect on your experience..."
-                            class="field-input"></textarea>
-                  <p *ngIf="optionalForm.get('reflection')?.invalid && optionalForm.get('reflection')?.touched"
-                     class="field-error">A reflection is required for this event.</p>
-                  <p class="field-hint">What did you learn or feel?</p>
-                </div>
+                <mat-form-field *ngIf="event?.captureOptions?.hasReflection" appearance="outline" class="w-full">
+                  <mat-label>Reflection</mat-label>
+                  <textarea matInput formControlName="reflection" rows="3"
+                            placeholder="Reflect on your experience..."></textarea>
+                  <mat-hint>What did you learn or feel?</mat-hint>
+                  <mat-error *ngIf="optionalForm.get('reflection')?.invalid">
+                    A reflection is required for this event.
+                  </mat-error>
+                </mat-form-field>
 
-                <div *ngIf="event?.hourMode === 'volume'">
-                  <label class="field-label">
-                    How many {{ event?.volumeUnitName || 'units' }}?
-                    <span class="text-red-500">*</span>
-                  </label>
-                  <input type="number" formControlName="unitAmount" min="0" step="1"
-                         [placeholder]="'e.g. 5'"
-                         class="field-input" />
-                  <p *ngIf="optionalForm.get('unitAmount')?.invalid && optionalForm.get('unitAmount')?.touched"
-                     class="field-error">
-                    <ng-container *ngIf="optionalForm.get('unitAmount')?.hasError('required')">Please enter an amount.</ng-container>
-                    <ng-container *ngIf="optionalForm.get('unitAmount')?.hasError('min')">Must be 0 or more.</ng-container>
-                  </p>
-                  <!-- Conversion hint so the student knows what their units are worth -->
-                  <p class="field-hint">
-                    {{ volumeHint }}
-                  </p>
-                </div>
+                <mat-form-field *ngIf="event?.hourMode === 'volume'" appearance="outline" class="w-full">
+                  <mat-label>How many {{ event?.volumeUnitName || 'units' }}?</mat-label>
+                  <input matInput type="number" formControlName="unitAmount" min="0" step="1"
+                         placeholder="e.g. 5">
+                  <mat-hint>{{ volumeHint }}</mat-hint>
+                  <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('required')">
+                    Please enter an amount.
+                  </mat-error>
+                  <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('min')">
+                    Must be 0 or more.
+                  </mat-error>
+                </mat-form-field>
               </form>
             </ng-container>
 
@@ -152,9 +148,10 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <p>{{ submitError }}</p>
             </div>
 
-            <button type="button" (click)="confirmIn()"
+            <button mat-flat-button type="button"
+                    (click)="confirmIn()"
                     [disabled]="submitting || optionalForm.invalid"
-                    class="btn-primary w-full !py-4 !text-base !font-semibold">
+                    style="width:100%; height:52px; font-size:1rem; font-weight:600;">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
                 {{ submitting ? 'Signing in...' : 'Confirm Sign In' }}
@@ -198,10 +195,11 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               <p>{{ submitError }}</p>
             </div>
 
-            <button type="button" (click)="confirmOut()"
+            <button mat-flat-button type="button"
+                    (click)="confirmOut()"
                     [disabled]="submitting"
-                    class="w-full py-4 text-base font-semibold rounded-lg text-white transition-opacity cursor-pointer disabled:opacity-50"
-                    style="background-color: #f97316;">
+                    style="width:100%; height:52px; font-size:1rem; font-weight:600;
+                           --mdc-filled-button-container-color: #f97316;">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
                 {{ submitting ? 'Signing out...' : 'Confirm Sign Out' }}
@@ -279,14 +277,12 @@ export class SubmitComponent implements OnInit {
       || this.studentEmail[0]?.toUpperCase() || '?';
   }
 
-  /** e.g. "Each bag collected = 30 min" or "Every 10 km walked = 1h" */
   get volumeHint(): string {
     const conv  = this.event?.volumeConversion ?? 1;
     const unit  = this.event?.volumeUnitName   ?? 'unit';
     const amount = this.optionalForm?.get('unitAmount')?.value;
 
     if (conv >= 1) {
-      // 1 unit = N hours
       const hrs = Math.round(conv * 100) / 100;
       const suffix = hrs >= 1 ? `${hrs}h` : `${Math.round(conv * 60)} min`;
       const preview = amount > 0
@@ -294,7 +290,6 @@ export class SubmitComponent implements OnInit {
         : '';
       return `Each ${unit} = ${suffix}${preview}`;
     } else {
-      // N units = 1 hour
       const unitsPerHour = Math.round((1 / conv) * 100) / 100;
       const preview = amount > 0
         ? `  ·  ${amount} ${unit} = ${this.fmtHours(amount * conv)}`
@@ -335,14 +330,12 @@ export class SubmitComponent implements OnInit {
     this.studentId    = c?.studentId    ?? params['studentId'] ?? '';
     this.displayName  = [this.studentFirst, this.studentLast].filter(Boolean).join(' ') || this.studentEmail;
 
-    // Build optional fields form (validators added after event loads)
     this.optionalForm = this.fb.group({
       description: [''],
       reflection:  [''],
       unitAmount:  [null, [Validators.min(0)]],
     });
 
-    // Guard: reject non-ObjectId values before hitting the API
     if (!/^[a-f\d]{24}$/i.test(eventId)) {
       this.loadError = 'Invalid event link — the QR code may be damaged or the link is incorrect.';
       this.state = 'error';

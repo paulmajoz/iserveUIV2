@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
@@ -15,6 +16,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
   imports: [
     CommonModule,
     MatIconModule,
+    MatButtonModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     HeaderComponent,
@@ -27,9 +29,8 @@ import { UrlContextService } from '../../../core/services/url-context.service';
 
       <!-- Back + title -->
       <div class="flex items-center gap-3 my-6">
-        <button type="button"
+        <button mat-icon-button
                 (click)="router.navigate(['/teacher/events', eventId], { queryParams: qp })"
-                class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                 aria-label="Back to event">
           <mat-icon>arrow_back</mat-icon>
         </button>

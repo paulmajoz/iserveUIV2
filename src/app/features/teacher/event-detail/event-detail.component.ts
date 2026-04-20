@@ -7,6 +7,7 @@ import { ExcelExportModule } from 'ag-grid-enterprise';
 
 ModuleRegistry.registerModules([ExcelExportModule]);
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
@@ -23,6 +24,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
     CommonModule,
     AgGridAngular,
     MatIconModule,
+    MatButtonModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     HeaderComponent,
@@ -32,7 +34,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
   template: `
     <app-header></app-header>
 
-    <main class="flex flex-col h-[calc(100vh-64px)]">
+    <main class="flex flex-col h-[calc(100vh-48px)]">
 
       <!-- Loading state -->
       <div *ngIf="loadingEvent" class="flex justify-center py-16">
@@ -49,18 +51,17 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       </div>
 
       <!-- Event summary bar -->
-      <div *ngIf="event" class="px-6 py-4 bg-white border-b border-gray-100">
+      <div *ngIf="event" class="px-4 py-3 bg-white border-b border-gray-100">
         <div class="flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-4">
-            <button type="button"
+            <button mat-icon-button
                     (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
-                    class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                     aria-label="Back to events">
               <mat-icon>arrow_back</mat-icon>
             </button>
             <div>
-              <h2 class="text-xl font-bold text-gray-800">{{ event.eventName }}</h2>
-              <div class="flex gap-3 text-sm text-gray-500 mt-0.5">
+              <h2 class="text-base font-semibold text-gray-900">{{ event.eventName }}</h2>
+              <div class="flex gap-3 text-xs text-gray-500 mt-0.5">
                 <span>{{ event.qrMode === 'in-out' ? 'In/Out' : 'Single Scan' }}</span>
                 <span>•</span>
                 <span>{{ hourModeLabel }}</span>
@@ -69,11 +70,11 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             </div>
           </div>
           <div class="flex gap-2">
-            <button type="button" class="btn-secondary !px-4 !py-2 !text-sm"
+            <button mat-stroked-button
                     (click)="router.navigate(['/teacher/events', eventId, 'qr'], { queryParams: qp })">
               View QR Codes
             </button>
-            <button type="button" class="btn-primary !px-4 !py-2 !text-sm"
+            <button mat-flat-button
                     (click)="showScanner = !showScanner">
               {{ showScanner ? 'Hide Scanner' : 'Scan Student' }}
             </button>
@@ -82,7 +83,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       </div>
 
       <!-- Scanner panel -->
-      <div *ngIf="showScanner" class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-col items-center gap-4">
+      <div *ngIf="showScanner" class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex flex-col items-center gap-4">
         <p class="text-sm font-medium text-gray-600">Scan a student's QR badge to record attendance</p>
         <app-qr-scanner (scanned)="onStudentScanned($event)"></app-qr-scanner>
         <div *ngIf="scanError" class="error-banner w-full max-w-md">
@@ -92,17 +93,17 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       </div>
 
       <!-- Stats bar -->
-      <div *ngIf="event" class="grid grid-cols-3 px-6 py-3 bg-gray-50 border-b border-gray-100 gap-4">
+      <div *ngIf="event" class="grid grid-cols-3 px-4 py-2 bg-gray-50 border-b border-gray-100 gap-4">
         <div class="text-center">
-          <p class="text-2xl font-bold text-gray-800">{{ attendance.length }}</p>
+          <p class="text-xl font-bold text-gray-800">{{ attendance.length }}</p>
           <p class="text-xs text-gray-500">Total Scans</p>
         </div>
         <div class="text-center">
-          <p class="text-2xl font-bold text-gray-800">{{ uniqueStudents }}</p>
+          <p class="text-xl font-bold text-gray-800">{{ uniqueStudents }}</p>
           <p class="text-xs text-gray-500">Students</p>
         </div>
         <div class="text-center">
-          <p class="text-2xl font-bold text-gray-800">{{ totalHours | hoursFormat }}</p>
+          <p class="text-xl font-bold text-gray-800">{{ totalHours | hoursFormat }}</p>
           <p class="text-xs text-gray-500">Total Hours</p>
         </div>
       </div>
@@ -119,9 +120,8 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <!-- Attendance grid -->
       <div *ngIf="event && !attendanceError" class="flex-1 p-4">
         <div class="flex justify-end mb-2">
-          <button type="button" (click)="exportExcel()"
-                  class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <mat-icon class="!text-base !w-4 !h-4">download</mat-icon>
+          <button mat-button (click)="exportExcel()" style="color:#6b7280">
+            <mat-icon>download</mat-icon>
             Export Excel
           </button>
         </div>
@@ -213,7 +213,7 @@ export class EventDetailComponent implements OnInit {
     defaultColDef: { resizable: true, sortable: true },
     pagination: true,
     paginationPageSize: 25,
-    rowHeight: 38,
+    rowHeight: 36,
     rowGroupPanelShow: 'never',
     pivotPanelShow:    'never',
     suppressRowClickSelection: true,

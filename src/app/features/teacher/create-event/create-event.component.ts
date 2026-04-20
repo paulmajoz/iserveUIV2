@@ -3,8 +3,15 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDividerModule } from '@angular/material/divider';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { QrDisplayComponent } from '../../../shared/components/qr-display/qr-display.component';
 import { EventsService, IEvent } from '../../../core/services/events.service';
@@ -17,15 +24,22 @@ import { UrlContextService } from '../../../core/services/url-context.service';
     CommonModule,
     ReactiveFormsModule,
     MatIconModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatSlideToggleModule,
+    MatButtonToggleModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatDividerModule,
     HeaderComponent,
     QrDisplayComponent,
   ],
   template: `
     <app-header></app-header>
 
-    <main class="max-w-xl mx-auto px-4 pb-12">
+    <main class="max-w-xl mx-auto px-4 py-4 pb-12">
 
       <!-- ═══════════════════════════════════════════════
            FORM VIEW
@@ -33,17 +47,14 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <ng-container *ngIf="view === 'form'">
 
         <!-- Title row: back + heading + clear -->
-        <div class="flex items-center gap-3 my-6">
+        <div class="flex items-center gap-3 my-4">
           <button mat-icon-button
                   (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
                   aria-label="Back to events">
             <mat-icon>arrow_back</mat-icon>
           </button>
-          <h2 class="text-2xl font-bold text-gray-800 flex-1">Create Event</h2>
-          <button type="button" (click)="clearForm()"
-                  class="btn-secondary !px-4 !py-2 !text-sm">
-            Clear
-          </button>
+          <h2 class="text-base font-semibold text-gray-900 flex-1">Create Event</h2>
+          <button mat-stroked-button type="button" (click)="clearForm()">Clear</button>
         </div>
 
         <!-- API error banner -->
@@ -58,148 +69,121 @@ import { UrlContextService } from '../../../core/services/url-context.service';
         <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4" novalidate>
 
           <!-- ── Event Details ──────────────────────────── -->
-          <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-            <p class="form-section-label">Event Details</p>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Event Details</p>
 
             <!-- Event Name -->
-            <div>
-              <label class="field-label">
-                Event Name <span class="text-red-500">*</span>
-              </label>
-              <input type="text" formControlName="eventName"
-                     placeholder="e.g. Beach Cleanup 2025"
-                     class="field-input" />
-              <p *ngIf="form.get('eventName')?.invalid && form.get('eventName')?.touched"
-                 class="field-error">
-                <ng-container *ngIf="form.get('eventName')?.hasError('required')">Event name is required.</ng-container>
-                <ng-container *ngIf="form.get('eventName')?.hasError('minlength')">Must be at least 3 characters.</ng-container>
-              </p>
-            </div>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Event Name</mat-label>
+              <input matInput formControlName="eventName" placeholder="e.g. Beach Cleanup 2025">
+              <mat-error *ngIf="form.get('eventName')?.hasError('required')">Event name is required.</mat-error>
+              <mat-error *ngIf="form.get('eventName')?.hasError('minlength')">Must be at least 3 characters.</mat-error>
+            </mat-form-field>
 
-            <!-- Type + Category -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="field-label">Event Type</label>
-                <select formControlName="eventTypeId" class="field-input">
-                  <option value="">— None —</option>
-                  <option *ngFor="let t of eventTypes" [value]="t._id">{{ t.name }}</option>
-                </select>
-                <p *ngIf="typesError" class="field-error">{{ typesError }}</p>
-              </div>
-              <div>
-                <label class="field-label">Category</label>
-                <select formControlName="eventCategoryId" class="field-input">
-                  <option value="">— None —</option>
-                  <option *ngFor="let c of eventCategories" [value]="c._id">{{ c.name }}</option>
-                </select>
-                <p *ngIf="catsError" class="field-error">{{ catsError }}</p>
-              </div>
+            <!-- Type + Category — always 2 columns, min-width 0 prevents overflow -->
+            <div class="grid grid-cols-2 gap-3">
+              <mat-form-field appearance="outline" class="w-full min-w-0">
+                <mat-label>Type</mat-label>
+                <mat-select formControlName="eventTypeId">
+                  <mat-option value="">None</mat-option>
+                  <mat-option *ngFor="let t of eventTypes" [value]="t._id">{{ t.name }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="typesError">{{ typesError }}</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="w-full min-w-0">
+                <mat-label>Category</mat-label>
+                <mat-select formControlName="eventCategoryId">
+                  <mat-option value="">None</mat-option>
+                  <mat-option *ngFor="let c of eventCategories" [value]="c._id">{{ c.name }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="catsError">{{ catsError }}</mat-error>
+              </mat-form-field>
             </div>
           </div>
 
           <!-- ── Hours Tracking ─────────────────────────── -->
-          <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-            <p class="form-section-label">Hours Tracking</p>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Hours Tracking</p>
 
-            <!-- 2 × 2 mode grid -->
-            <div class="grid grid-cols-2 gap-2">
-              <button type="button" *ngFor="let mode of hourModes"
-                      class="rounded-xl border px-3 py-2.5 text-left transition-all duration-150"
-                      [class.border-gray-200]="form.get('hourMode')?.value !== mode.value"
-                      [style.border-color]="form.get('hourMode')?.value === mode.value ? 'var(--color-primary)' : null"
-                      [style.background]="form.get('hourMode')?.value === mode.value ? 'color-mix(in srgb, var(--color-primary) 10%, white)' : 'white'"
-                      (click)="form.get('hourMode')?.setValue(mode.value)">
-                <p class="text-sm font-semibold text-gray-800">{{ mode.label }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{{ mode.desc }}</p>
-              </button>
-            </div>
+            <!-- 2 × 2 hour mode button-toggle -->
+            <mat-button-toggle-group formControlName="hourMode" class="hour-mode-group">
+              <mat-button-toggle *ngFor="let mode of hourModes" [value]="mode.value">
+                <p class="text-xs font-semibold text-gray-800 leading-tight">{{ mode.label }}</p>
+                <p class="text-xs text-gray-400 mt-0.5 leading-tight whitespace-normal">{{ mode.desc }}</p>
+              </mat-button-toggle>
+            </mat-button-toggle-group>
 
             <!-- Fixed hours -->
-            <div *ngIf="form.get('hourMode')?.value === 'fixed'">
-              <label class="field-label">Fixed hours per scan</label>
-              <input type="number" formControlName="fixedHours" min="0.5" step="0.5"
-                     class="field-input" style="max-width: 160px" />
-              <p *ngIf="form.get('fixedHours')?.invalid && form.get('fixedHours')?.touched"
-                 class="field-error">Must be at least 0.5 hours.</p>
-              <p class="field-hint">e.g. 1 for one hour per attendance</p>
+            <div *ngIf="form.get('hourMode')?.value === 'fixed'" class="grid grid-cols-2 gap-3">
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Fixed hours per scan</mat-label>
+                <input matInput type="number" formControlName="fixedHours" min="0.5" step="0.5">
+                <mat-error *ngIf="form.get('fixedHours')?.invalid">At least 0.5 hours.</mat-error>
+                <mat-hint>e.g. 1 = one hour</mat-hint>
+              </mat-form-field>
             </div>
 
             <!-- Volume -->
-            <div *ngIf="form.get('hourMode')?.value === 'volume'" class="space-y-4">
+            <div *ngIf="form.get('hourMode')?.value === 'volume'" class="space-y-3">
 
-              <!-- Unit name -->
-              <div>
-                <label class="field-label">Unit name</label>
-                <input type="text" formControlName="volumeUnitName"
-                       placeholder="e.g. bags collected, km walked, meals served"
-                       class="field-input" />
-                <p *ngIf="form.get('volumeUnitName')?.invalid && form.get('volumeUnitName')?.touched"
-                   class="field-error">Unit name is required for volume mode.</p>
-              </div>
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Unit name</mat-label>
+                <input matInput formControlName="volumeUnitName"
+                       placeholder="e.g. bags collected, km walked">
+                <mat-error *ngIf="form.get('volumeUnitName')?.invalid && form.get('volumeUnitName')?.touched">
+                  Unit name is required.
+                </mat-error>
+              </mat-form-field>
 
-              <!-- Conversion equation: [ X ] units = [ Y ] hours -->
-              <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+              <!-- Conversion rate — responsive row -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Conversion Rate</p>
-
-                <div class="flex items-center gap-2 flex-wrap">
-                  <input type="number" formControlName="volumeUnitsInput"
-                         min="0.01" step="any"
-                         class="field-input !w-20 text-center" />
-                  <span class="text-sm text-gray-700 font-medium whitespace-nowrap">
-                    {{ form.get('volumeUnitName')?.value || 'units' }}
-                  </span>
-                  <span class="text-gray-400 font-bold text-lg">=</span>
-                  <input type="number" formControlName="volumeHoursInput"
-                         min="0.01" step="any"
-                         class="field-input !w-20 text-center" />
-                  <span class="text-sm text-gray-700 font-medium">hour(s)</span>
+                <div class="grid grid-cols-2 gap-3 items-end">
+                  <mat-form-field appearance="outline" class="w-full">
+                    <mat-label>Units</mat-label>
+                    <input matInput type="number" formControlName="volumeUnitsInput" min="0.01" step="any">
+                    <mat-hint>{{ form.get('volumeUnitName')?.value || 'units' }}</mat-hint>
+                    <mat-error *ngIf="form.get('volumeUnitsInput')?.invalid && form.get('volumeUnitsInput')?.touched">Must be &gt; 0.</mat-error>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="w-full">
+                    <mat-label>= Hours</mat-label>
+                    <input matInput type="number" formControlName="volumeHoursInput" min="0.01" step="any">
+                    <mat-hint>hour(s)</mat-hint>
+                    <mat-error *ngIf="form.get('volumeHoursInput')?.invalid && form.get('volumeHoursInput')?.touched">Must be &gt; 0.</mat-error>
+                  </mat-form-field>
                 </div>
-
-                <p class="field-hint">
-                  Preview: 1 {{ form.get('volumeUnitName')?.value || 'unit' }}
-                  = <strong>{{ conversionPreview }}</strong>
+                <p class="text-xs text-gray-400">
+                  Preview: 1 {{ form.get('volumeUnitName')?.value || 'unit' }} = <strong>{{ conversionPreview }}</strong>
                 </p>
-
-                <p *ngIf="form.get('volumeUnitsInput')?.invalid && form.get('volumeUnitsInput')?.touched"
-                   class="field-error">Units value must be greater than 0.</p>
-                <p *ngIf="form.get('volumeHoursInput')?.invalid && form.get('volumeHoursInput')?.touched"
-                   class="field-error">Hours value must be greater than 0.</p>
               </div>
 
             </div>
           </div>
 
           <!-- ── Points ─────────────────────────────────── -->
-          <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-            <p class="form-section-label">Points</p>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Points</p>
 
-            <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center justify-between gap-4 py-1">
               <div class="min-w-0">
                 <p class="text-sm font-medium text-gray-800">Award points per scan</p>
                 <p class="text-xs text-gray-400 mt-0.5">Students earn points each time they scan in</p>
               </div>
-              <button type="button"
-                      class="toggle-track shrink-0"
-                      [class.on]="form.get('pointsEnabled')?.value"
-                      (click)="toggle('pointsEnabled')"
-                      [attr.aria-checked]="form.get('pointsEnabled')?.value"
-                      role="switch">
-                <span class="toggle-thumb"></span>
-              </button>
+              <mat-slide-toggle formControlName="pointsEnabled"></mat-slide-toggle>
             </div>
 
             <div *ngIf="form.get('pointsEnabled')?.value">
-              <label class="field-label">Points per scan</label>
-              <input type="number" formControlName="pointsValue" min="1"
-                     class="field-input" style="max-width: 160px" />
-              <p *ngIf="form.get('pointsValue')?.invalid && form.get('pointsValue')?.touched"
-                 class="field-error">Must be at least 1 point.</p>
+              <mat-form-field appearance="outline" style="max-width:200px">
+                <mat-label>Points per scan</mat-label>
+                <input matInput type="number" formControlName="pointsValue" min="1">
+                <mat-error *ngIf="form.get('pointsValue')?.invalid">Must be at least 1 point.</mat-error>
+              </mat-form-field>
             </div>
           </div>
 
           <!-- ── Capture Options ────────────────────────── -->
-          <div class="bg-white rounded-2xl shadow-sm p-5">
-            <p class="form-section-label">Additional Capture</p>
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Additional Capture</p>
             <div class="space-y-1">
               <div *ngFor="let opt of captureOpts"
                    class="flex items-center justify-between gap-4 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors">
@@ -210,20 +194,14 @@ import { UrlContextService } from '../../../core/services/url-context.service';
                     <p class="text-xs text-gray-400">{{ opt.desc }}</p>
                   </div>
                 </div>
-                <button type="button"
-                        class="toggle-track shrink-0"
-                        [class.on]="form.get(opt.key)?.value"
-                        (click)="toggle(opt.key)"
-                        [attr.aria-checked]="form.get(opt.key)?.value"
-                        role="switch">
-                  <span class="toggle-thumb"></span>
-                </button>
+                <mat-slide-toggle [formControlName]="opt.key"></mat-slide-toggle>
               </div>
             </div>
           </div>
 
           <!-- ── Submit ─────────────────────────────────── -->
-          <button type="submit" [disabled]="loading" class="btn-primary w-full !py-3 !text-base">
+          <button mat-flat-button type="submit" [disabled]="loading"
+                  style="width:100%; height:44px; font-size:0.875rem; font-weight:600;">
             <span class="flex items-center justify-center gap-2">
               <mat-spinner *ngIf="loading" diameter="18"></mat-spinner>
               {{ loading ? 'Creating event...' : 'Create Event & Generate QR Codes' }}
@@ -239,17 +217,16 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <ng-container *ngIf="view === 'qr' && createdEvent">
 
         <!-- Title row: back + heading + view-event -->
-        <div class="flex items-center gap-3 my-6">
+        <div class="flex items-center gap-3 my-4">
           <button mat-icon-button (click)="view = 'form'" aria-label="Back to form">
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div class="flex-1 min-w-0">
-            <h2 class="text-2xl font-bold text-gray-800">QR Codes Ready</h2>
-            <p class="text-sm text-gray-500 truncate">{{ createdEvent.eventName }}</p>
+            <h2 class="text-base font-semibold text-gray-900">QR Codes Ready</h2>
+            <p class="text-xs text-gray-500 truncate">{{ createdEvent.eventName }}</p>
           </div>
-          <button type="button"
-                  (click)="router.navigate(['/teacher/events', createdEvent._id], { queryParams: qp })"
-                  class="btn-secondary shrink-0 !px-4 !py-2 !text-sm">
+          <button mat-stroked-button
+                  (click)="router.navigate(['/teacher/events', createdEvent._id], { queryParams: qp })">
             View Event
           </button>
         </div>
@@ -270,7 +247,6 @@ import { UrlContextService } from '../../../core/services/url-context.service';
         <!-- QR code card(s) -->
         <div class="flex flex-wrap gap-6 justify-center">
 
-          <!-- Sign In / Single QR -->
           <app-qr-display
             *ngIf="createdEvent.qrCodeIn"
             [qrDataUrl]="createdEvent.qrCodeIn"
@@ -281,7 +257,6 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             (onEmail)="sendEmail()"
           ></app-qr-display>
 
-          <!-- Sign Out QR (in-out mode only) -->
           <app-qr-display
             *ngIf="createdEvent.qrMode === 'in-out' && createdEvent.qrCodeOut"
             [qrDataUrl]="createdEvent.qrCodeOut"
@@ -292,7 +267,6 @@ import { UrlContextService } from '../../../core/services/url-context.service';
             (onEmail)="sendEmail()"
           ></app-qr-display>
 
-          <!-- QR codes not generated yet (edge case) -->
           <div *ngIf="!createdEvent.qrCodeIn" class="info-banner w-full">
             <mat-icon class="shrink-0 text-blue-500">info</mat-icon>
             <p>QR codes are being generated — refresh the event page in a moment.</p>
@@ -302,7 +276,8 @@ import { UrlContextService } from '../../../core/services/url-context.service';
 
         <!-- Bottom: create another -->
         <div class="mt-8 pt-6 border-t border-gray-200">
-          <button type="button" (click)="clearForm()" class="btn-secondary w-full !py-3 !text-sm">
+          <button mat-stroked-button type="button" (click)="clearForm()"
+                  style="width:100%; height:48px; font-size:0.875rem;">
             Create Another Event
           </button>
         </div>
@@ -321,9 +296,7 @@ export class CreateEventComponent implements OnInit {
   eventTypes: { _id: string; name: string }[] = [];
   eventCategories: { _id: string; name: string }[] = [];
 
-  /** Controls which panel is visible */
   view: 'form' | 'qr' = 'form';
-  /** The event returned by the API after creation */
   createdEvent?: IEvent;
 
   readonly hourModes = [
@@ -395,7 +368,6 @@ export class CreateEventComponent implements OnInit {
     });
   }
 
-  /** Reset form to defaults and return to the form view */
   clearForm() {
     this.form.reset({
       eventName: '', eventTypeId: '', eventCategoryId: '',
@@ -410,11 +382,6 @@ export class CreateEventComponent implements OnInit {
     this.view = 'form';
   }
 
-  toggle(field: string) {
-    const ctrl = this.form.get(field);
-    if (ctrl) { ctrl.setValue(!ctrl.value); ctrl.markAsDirty(); }
-  }
-
   submit() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.loading = true;
@@ -423,7 +390,6 @@ export class CreateEventComponent implements OnInit {
     const v = this.form.value;
     const c = this.ctx.context;
 
-    // In/Out Duration is the only mode that needs a sign-out QR code
     const qrMode = v.hourMode === 'in-out' ? 'in-out' : 'once-off';
 
     const dto: any = {
@@ -455,7 +421,6 @@ export class CreateEventComponent implements OnInit {
         this.loading = false;
         this.createdEvent = event;
         this.view = 'qr';
-        // Scroll back to top so QR codes are immediately visible
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
       error: (err) => {

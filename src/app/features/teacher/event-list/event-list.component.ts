@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ModuleRegistry, ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
@@ -24,6 +29,11 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
     CommonModule,
     ReactiveFormsModule,
     MatIconModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatTooltipModule,
     MatProgressSpinnerModule,
     AgGridAngular,
     HeaderComponent,
@@ -33,83 +43,96 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
 
     <main class="flex flex-col" style="height: calc(100vh - 56px)">
 
-      <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
-      <div class="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100 gap-4 shrink-0">
-        <h2 class="text-xl font-bold text-gray-800 shrink-0">Events</h2>
-        <div class="flex items-center gap-3 flex-1 justify-end">
+      <!-- ── Single unified toolbar ────────────────────────────────────────── -->
+      <div class="flex items-center gap-2 px-4 bg-white border-b border-gray-100 flex-wrap shrink-0"
+           style="padding-top:6px; padding-bottom:6px;">
 
-          <!-- Search -->
-          <div class="relative">
-            <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      style="font-size:18px;width:18px;height:18px;">search</mat-icon>
-            <input type="text" [formControl]="searchCtrl" (input)="onSearch()"
-                   placeholder="Search events…"
-                   class="field-input !pl-9 !w-52 !py-2 !text-sm" />
-          </div>
+        <!-- Title -->
+        <h2 class="text-lg font-bold text-gray-800 shrink-0 mr-1">Events</h2>
 
-          <!-- Export visible events -->
-          <button type="button" class="btn-secondary !px-4 !py-2 !text-sm flex items-center gap-1.5"
-                  [disabled]="!gridApi || filteredEvents.length === 0"
-                  (click)="exportMasterGrid()">
-            <mat-icon style="font-size:16px;width:16px;height:16px;">download</mat-icon>
-            Export
-          </button>
+        <!-- Divider -->
+        <div class="h-6 w-px bg-gray-200 shrink-0"></div>
 
-          <button type="button" class="btn-primary !px-4 !py-2 !text-sm"
-                  (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
-            New Event
-          </button>
-        </div>
-      </div>
+        <!-- Search -->
+        <mat-form-field appearance="outline" class="compact-field" style="width:180px; margin-bottom:0">
+          <mat-icon matPrefix style="font-size:16px;width:16px;height:16px;color:#9ca3af">search</mat-icon>
+          <input matInput [formControl]="searchCtrl" (input)="onSearch()" placeholder="Search…">
+        </mat-form-field>
 
-      <!-- ── Filter bar ───────────────────────────────────────────────────── -->
-      <div class="flex items-center gap-2 px-6 py-2.5 bg-gray-50 border-b border-gray-100 flex-wrap shrink-0">
+        <!-- Mode -->
+        <mat-form-field appearance="outline" class="compact-field" style="width:120px; margin-bottom:0">
+          <mat-label>Mode</mat-label>
+          <mat-select [formControl]="filterModeCtrl">
+            <mat-option value="">All</mat-option>
+            <mat-option value="in-out">In / Out</mat-option>
+            <mat-option value="once-off">Once-Off</mat-option>
+          </mat-select>
+        </mat-form-field>
 
-        <select [formControl]="filterModeCtrl"
-                class="field-input !w-auto !py-1.5 !px-3 !text-xs !rounded-lg">
-          <option value="">All Modes</option>
-          <option value="in-out">In / Out</option>
-          <option value="once-off">Once-Off</option>
-        </select>
+        <!-- Hours -->
+        <mat-form-field appearance="outline" class="compact-field" style="width:140px; margin-bottom:0">
+          <mat-label>Hours</mat-label>
+          <mat-select [formControl]="filterHoursCtrl">
+            <mat-option value="">All</mat-option>
+            <mat-option value="in-out">In/Out</mat-option>
+            <mat-option value="fixed">Fixed</mat-option>
+            <mat-option value="volume">Volume</mat-option>
+            <mat-option value="disabled">None</mat-option>
+          </mat-select>
+        </mat-form-field>
 
-        <select [formControl]="filterHoursCtrl"
-                class="field-input !w-auto !py-1.5 !px-3 !text-xs !rounded-lg">
-          <option value="">All Hour Types</option>
-          <option value="in-out">In/Out Duration</option>
-          <option value="fixed">Fixed Hours</option>
-          <option value="volume">Volume-Based</option>
-          <option value="disabled">No Hours</option>
-        </select>
+        <!-- Points -->
+        <mat-form-field appearance="outline" class="compact-field" style="width:110px; margin-bottom:0">
+          <mat-label>Points</mat-label>
+          <mat-select [formControl]="filterPointsCtrl">
+            <mat-option value="">Any</mat-option>
+            <mat-option value="yes">Yes</mat-option>
+            <mat-option value="no">No</mat-option>
+          </mat-select>
+        </mat-form-field>
 
-        <select [formControl]="filterPointsCtrl"
-                class="field-input !w-auto !py-1.5 !px-3 !text-xs !rounded-lg">
-          <option value="">Any Points</option>
-          <option value="yes">With Points</option>
-          <option value="no">No Points</option>
-        </select>
+        <!-- Date range -->
+        <label class="toolbar-date-field">
+          <span class="toolbar-date-label">From</span>
+          <input type="date" [formControl]="filterFromCtrl" class="toolbar-date-input">
+        </label>
 
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-gray-400 font-medium shrink-0">From</span>
-          <input type="date" [formControl]="filterFromCtrl"
-                 class="field-input !w-auto !py-1.5 !px-3 !text-xs !rounded-lg" />
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-gray-400 font-medium shrink-0">To</span>
-          <input type="date" [formControl]="filterToCtrl"
-                 class="field-input !w-auto !py-1.5 !px-3 !text-xs !rounded-lg" />
-        </div>
+        <label class="toolbar-date-field">
+          <span class="toolbar-date-label">To</span>
+          <input type="date" [formControl]="filterToCtrl" class="toolbar-date-input">
+        </label>
 
-        <div class="flex items-center gap-3 ml-auto">
-          <span *ngIf="activeFilterCount > 0" class="text-xs text-gray-500 shrink-0">
-            {{ filteredEvents.length }} of {{ events.length }} event{{ events.length !== 1 ? 's' : '' }}
+        <!-- Active filter count + clear -->
+        <ng-container *ngIf="activeFilterCount > 0">
+          <span class="text-xs text-gray-400 shrink-0">
+            {{ filteredEvents.length }}/{{ events.length }}
           </span>
-          <button *ngIf="activeFilterCount > 0" (click)="clearFilters()"
-                  class="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700
-                         bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition-colors shrink-0">
-            <mat-icon style="font-size:13px;width:13px;height:13px">close</mat-icon>
-            Clear {{ activeFilterCount > 1 ? activeFilterCount + ' filters' : 'filter' }}
+          <button mat-icon-button (click)="clearFilters()"
+                  style="color:#ef4444; width:32px; height:32px;"
+                  [matTooltip]="'Clear ' + activeFilterCount + ' filter' + (activeFilterCount > 1 ? 's' : '')">
+            <mat-icon style="font-size:18px;width:18px;height:18px">filter_list_off</mat-icon>
           </button>
-        </div>
+        </ng-container>
+
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+
+        <!-- Actions -->
+        <div class="h-6 w-px bg-gray-200 shrink-0"></div>
+
+        <button mat-stroked-button
+                [disabled]="!gridApi || filteredEvents.length === 0"
+                (click)="exportMasterGrid()">
+          <mat-icon>download</mat-icon>
+          Export
+        </button>
+
+        <button mat-flat-button
+                (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
+          <mat-icon>add</mat-icon>
+          New Event
+        </button>
+
       </div>
 
       <!-- ── API error ────────────────────────────────────────────────────── -->
@@ -132,7 +155,7 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
         <mat-icon style="font-size:56px;width:56px;height:56px;">event_busy</mat-icon>
         <p class="text-lg font-medium">No events yet</p>
         <p class="text-sm">Create your first event to get started</p>
-        <button type="button" class="btn-primary !px-5 !py-2.5"
+        <button mat-flat-button
                 (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
           Create Event
         </button>
@@ -143,9 +166,7 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
            class="flex flex-col items-center justify-center flex-1 gap-3 text-gray-400">
         <mat-icon style="font-size:48px;width:48px;height:48px;">filter_list_off</mat-icon>
         <p class="text-base font-medium">No events match the current filters</p>
-        <button type="button" (click)="clearFilters()" class="btn-secondary !px-4 !py-2 !text-sm">
-          Clear Filters
-        </button>
+        <button mat-stroked-button (click)="clearFilters()">Clear Filters</button>
       </div>
 
       <!-- ── Master / Detail grid ─────────────────────────────────────────── -->
@@ -275,7 +296,7 @@ export class EventListComponent implements OnInit, OnDestroy {
       defaultColDef: { resizable: true, sortable: true },
       pagination: true,
       paginationPageSize: 25,
-      rowHeight: 38,
+      rowHeight: 36,
       rowGroupPanelShow: 'never',
       pivotPanelShow:    'never',
 
@@ -289,8 +310,8 @@ export class EventListComponent implements OnInit, OnDestroy {
 
       // ── Master / Detail ────────────────────────────────────────────────
       masterDetail: true,
-      // fixed height: 40px panel header + 38px col headers + 10×34px rows + 48px pagination bar
-      detailRowHeight: 466,
+      // fixed height: 40px panel header + 34px col headers + 10×32px rows + 34px pagination bar = 428
+      detailRowHeight: 428,
       embedFullWidthRows: true,
       isRowMaster: () => true,
 
@@ -321,7 +342,7 @@ export class EventListComponent implements OnInit, OnDestroy {
         },
 
         detailGridOptions: {
-          rowHeight: 34,
+          rowHeight: 32,
           defaultColDef: { resizable: true, sortable: true },
           suppressCellFocus: true,
           pagination: true,
@@ -338,7 +359,6 @@ export class EventListComponent implements OnInit, OnDestroy {
           },
 
           onFirstDataRendered: (e: any) => {
-            // Re-apply responsive on first render to ensure correct fill
             this.applyDetailResponsive(e.api);
           },
 
@@ -488,7 +508,6 @@ export class EventListComponent implements OnInit, OnDestroy {
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
-    // Auto-fit column widths
     const colWidths = Object.keys(rows[0] ?? {}).map(k => ({
       wch: Math.max(k.length, ...rows.map(r => String((r as any)[k] ?? '').length)) + 2,
     }));

@@ -25,7 +25,7 @@ interface ProgressBar {
   template: `
     <app-header></app-header>
 
-    <main class="max-w-5xl mx-auto p-4 pb-12 space-y-6">
+    <main class="max-w-4xl mx-auto px-3 pb-8 space-y-4 pt-4">
 
       <!-- Loading -->
       <div *ngIf="loading" class="flex justify-center py-16">
@@ -53,36 +53,36 @@ interface ProgressBar {
       <ng-container *ngIf="!loading && ctx.email">
 
         <!-- Student identity card -->
-        <div class="card flex items-center gap-4 flex-wrap mt-6">
-          <div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0"
+        <div class="card flex items-center gap-4 flex-wrap">
+          <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold text-white shrink-0"
                style="background-color: var(--color-primary)">
             {{ initials }}
           </div>
           <div class="flex-1 min-w-0">
-            <h2 class="text-xl font-bold text-gray-800">{{ displayName }}</h2>
-            <p class="text-sm text-gray-500">{{ ctx.email }}</p>
+            <h2 class="text-base font-semibold text-gray-800">{{ displayName }}</h2>
+            <p class="text-xs text-gray-500">{{ ctx.email }}</p>
             <p *ngIf="summary && summary.totalPoints > 0"
-               class="text-sm font-semibold mt-1" style="color: var(--color-primary)">
+               class="text-xs font-semibold mt-1" style="color: var(--color-primary)">
               {{ summary.totalPoints }} points earned
             </p>
           </div>
           <div class="text-right shrink-0" *ngIf="summary">
-            <p class="text-3xl font-bold text-gray-800">{{ summary.totalHours | hoursFormat }}</p>
+            <p class="text-2xl font-bold text-gray-800">{{ summary.totalHours | hoursFormat }}</p>
             <p class="text-xs text-gray-500">Total hours</p>
           </div>
         </div>
 
         <!-- Progress bars -->
-        <div *ngIf="progressBars.length > 0" class="card space-y-5">
-          <h3 class="font-semibold text-gray-700">Progress Towards Targets</h3>
+        <div *ngIf="progressBars.length > 0" class="card space-y-3">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Progress Towards Targets</h3>
           <div *ngFor="let bar of progressBars" class="space-y-1">
-            <div class="flex justify-between text-sm">
+            <div class="flex justify-between text-xs">
               <span class="font-medium text-gray-700">{{ bar.label }}</span>
               <span class="text-gray-500">
                 {{ bar.achieved | hoursFormat }} / {{ bar.target | hoursFormat }}
               </span>
             </div>
-            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div class="h-full rounded-full transition-all duration-500"
                    [style.width.%]="bar.percent"
                    [style.background-color]="bar.percent >= 100 ? '#22c55e' : 'var(--color-primary)'">
@@ -93,19 +93,19 @@ interface ProgressBar {
         </div>
 
         <!-- Hours breakdown -->
-        <div *ngIf="summary" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div *ngIf="summary" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="card" *ngIf="hoursByTypeEntries.length">
-            <h3 class="font-semibold text-gray-700 mb-4">Hours by Type</h3>
+            <h3 class="text-xs font-semibold text-gray-700 mb-3">Hours by Type</h3>
             <div *ngFor="let entry of hoursByTypeEntries"
-                 class="flex justify-between text-sm py-2 border-b border-gray-50 last:border-0">
+                 class="flex justify-between text-xs py-1.5 border-b border-gray-50 last:border-0">
               <span class="text-gray-600">{{ entry[0] }}</span>
               <span class="font-medium text-gray-800">{{ entry[1] | hoursFormat }}</span>
             </div>
           </div>
           <div class="card" *ngIf="hoursByCatEntries.length">
-            <h3 class="font-semibold text-gray-700 mb-4">Hours by Category</h3>
+            <h3 class="text-xs font-semibold text-gray-700 mb-3">Hours by Category</h3>
             <div *ngFor="let entry of hoursByCatEntries"
-                 class="flex justify-between text-sm py-2 border-b border-gray-50 last:border-0">
+                 class="flex justify-between text-xs py-1.5 border-b border-gray-50 last:border-0">
               <span class="text-gray-600">{{ entry[0] }}</span>
               <span class="font-medium text-gray-800">{{ entry[1] | hoursFormat }}</span>
             </div>
@@ -120,8 +120,8 @@ interface ProgressBar {
 
         <!-- Attendance records grid -->
         <div *ngIf="attendance.length > 0" class="card space-y-3">
-          <h3 class="font-semibold text-gray-700">Attendance Records</h3>
-          <div style="height: 400px;">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Attendance Records</h3>
+          <div style="height: 360px;">
             <ag-grid-angular
               class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden"
               [rowData]="attendance"
@@ -207,7 +207,7 @@ export class DashboardComponent implements OnInit {
     defaultColDef: { resizable: true, sortable: true },
     pagination: true,
     paginationPageSize: 15,
-    rowHeight: 38,
+    rowHeight: 36,
     rowGroupPanelShow: 'never',
     pivotPanelShow:    'never',
   };
