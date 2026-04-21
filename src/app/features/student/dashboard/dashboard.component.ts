@@ -59,7 +59,7 @@ interface ProgressBar {
             {{ initials }}
           </div>
           <div class="flex-1 min-w-0">
-            <h2 class="text-base font-semibold text-gray-800">{{ displayName }}</h2>
+            <h2 class="text-sm font-semibold text-gray-800">{{ displayName }}</h2>
             <p class="text-xs text-gray-500">{{ ctx.email }}</p>
             <p *ngIf="summary && summary.totalPoints > 0"
                class="text-xs font-semibold mt-1" style="color: var(--color-primary)">
@@ -67,7 +67,7 @@ interface ProgressBar {
             </p>
           </div>
           <div class="text-right shrink-0" *ngIf="summary">
-            <p class="text-2xl font-bold text-gray-800">{{ summary.totalHours | hoursFormat }}</p>
+            <p class="text-lg font-bold text-gray-800">{{ summary.totalHours | hoursFormat }}</p>
             <p class="text-xs text-gray-500">Total hours</p>
           </div>
         </div>

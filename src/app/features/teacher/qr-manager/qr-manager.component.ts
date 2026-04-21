@@ -34,7 +34,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
                 aria-label="Back to event">
           <mat-icon>arrow_back</mat-icon>
         </button>
-        <h2 class="text-2xl font-bold text-gray-800">QR Codes</h2>
+        <h2 class="text-sm font-bold text-gray-800">QR Codes</h2>
       </div>
 
       <!-- Load error -->
@@ -71,7 +71,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
 
       <!-- Event info card -->
       <div *ngIf="event && !loading" class="card mb-6">
-        <p class="text-lg font-semibold text-gray-800">{{ event.eventName }}</p>
+        <p class="text-sm font-semibold text-gray-800">{{ event.eventName }}</p>
         <p class="text-sm text-gray-500 mt-1">
           Mode: {{ event.qrMode === 'in-out' ? 'Sign In + Sign Out' : 'Single Scan' }}
         </p>

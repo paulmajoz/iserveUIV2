@@ -36,6 +36,12 @@
   --mdc-outlined-text-field-focus-label-text-color:   var(--color-primary);
   --mdc-outlined-text-field-caret-color:              var(--color-primary);
   --mdc-outlined-text-field-hover-outline-color:      var(--color-primary);
+  /* Input / label text sizes */
+  --mdc-outlined-text-field-input-text-size:          13px;
+  --mdc-outlined-text-field-label-text-size:          13px;
+  --mdc-filled-text-field-input-text-size:            13px;
+  --mdc-filled-text-field-label-text-size:            13px;
+  --mat-select-trigger-text-size:                     13px;
   /* Normal state — neutral fixed */
   --mdc-outlined-text-field-label-text-color:         #6b7280;
   --mdc-outlined-text-field-outline-color:            #d1d5db;
@@ -88,7 +94,7 @@ body {
   background-color: #f3f4f6;   /* FIXED — never school-themed */
   color: #111827;
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 
@@ -127,14 +133,14 @@ button.mat-mdc-icon-button {
  *  Add class="compact-field" to mat-form-field
  * ──────────────────────────────────────────────────────────────────────────── */
 .compact-field .mat-mdc-form-field-infix {
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
-  min-height: 36px !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  min-height: 32px !important;
 }
 .compact-field .mat-mdc-text-field-wrapper     { padding: 0 10px !important; }
-.compact-field .mdc-floating-label             { font-size: 12px !important; }
-.compact-field .mat-mdc-select-value           { font-size: 12px !important; }
-.compact-field input.mat-mdc-input-element     { font-size: 12px !important; }
+.compact-field .mdc-floating-label             { font-size: 11px !important; }
+.compact-field .mat-mdc-select-value           { font-size: 11px !important; }
+.compact-field input.mat-mdc-input-element     { font-size: 11px !important; }
 /* Hide the subscript (hint/error) reserved space in compact filter fields */
 .compact-field .mat-mdc-form-field-subscript-wrapper { display: none !important; }
 
@@ -164,7 +170,7 @@ button.mat-mdc-icon-button {
   pointer-events: none;
 }
 .toolbar-date-input {
-  font-size: 12px;
+  font-size: 11px;
   color: #111827;
   border: none;
   outline: none;

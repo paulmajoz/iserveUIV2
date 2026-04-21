@@ -99,15 +99,15 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <!-- Stats bar -->
       <div *ngIf="event" class="grid grid-cols-3 px-3 py-2 bg-gray-50 border-b border-gray-100 shrink-0 gap-2">
         <div class="text-center">
-          <p class="text-lg font-bold text-gray-800">{{ attendance.length }}</p>
+          <p class="text-base font-bold text-gray-800">{{ attendance.length }}</p>
           <p class="text-xs text-gray-500">Scans</p>
         </div>
         <div class="text-center">
-          <p class="text-lg font-bold text-gray-800">{{ uniqueStudents }}</p>
+          <p class="text-base font-bold text-gray-800">{{ uniqueStudents }}</p>
           <p class="text-xs text-gray-500">Students</p>
         </div>
         <div class="text-center">
-          <p class="text-lg font-bold text-gray-800">{{ totalHours | hoursFormat }}</p>
+          <p class="text-base font-bold text-gray-800">{{ totalHours | hoursFormat }}</p>
           <p class="text-xs text-gray-500">Hours</p>
         </div>
       </div>

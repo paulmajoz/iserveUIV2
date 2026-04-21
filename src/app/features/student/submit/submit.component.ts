@@ -33,7 +33,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
       <!-- ── Header bar ───────────────────────────── -->
       <div class="page-header text-center py-5 px-4">
         <p class="text-xs font-medium uppercase tracking-widest opacity-70 mb-1">iServe</p>
-        <h1 class="text-xl font-bold">{{ schoolName || 'Loading...' }}</h1>
+        <h1 class="text-base font-bold">{{ schoolName || 'Loading...' }}</h1>
         <p *ngIf="event" class="text-sm opacity-80 mt-0.5">{{ event.eventName }}</p>
       </div>
 
@@ -52,7 +52,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
             <div class="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
               <mat-icon class="text-red-400 !text-3xl">link_off</mat-icon>
             </div>
-            <h2 class="text-lg font-bold text-gray-800">Event Not Found</h2>
+            <h2 class="text-sm font-bold text-gray-800">Event Not Found</h2>
             <p class="text-gray-500 text-sm">
               This QR code may be invalid or the event may have ended.
             </p>
@@ -66,7 +66,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
 
             <!-- Student identity -->
             <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
                    style="background-color: var(--color-primary)">
                 {{ initials }}
               </div>
@@ -165,7 +165,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
 
             <!-- Student identity -->
             <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
                    style="background-color: var(--color-primary)">
                 {{ initials }}
               </div>
@@ -214,7 +214,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
             <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto">
               <mat-icon class="!text-3xl text-green-500">check_circle</mat-icon>
             </div>
-            <h2 class="text-xl font-bold text-gray-800">
+            <h2 class="text-base font-bold text-gray-800">
               {{ direction === 'out' ? 'Signed Out!' : 'Signed In!' }}
             </h2>
             <p class="text-gray-500 text-sm">Your attendance has been recorded.</p>
@@ -240,7 +240,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
             <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
               <mat-icon class="!text-3xl text-blue-400">info</mat-icon>
             </div>
-            <h2 class="text-xl font-bold text-gray-800">Already Recorded</h2>
+            <h2 class="text-base font-bold text-gray-800">Already Recorded</h2>
             <p class="text-gray-500 text-sm">
               Your attendance for <strong>{{ event?.eventName }}</strong> has already been recorded today.
             </p>
