@@ -48,6 +48,12 @@ export const routes: Routes = [
       import('./features/student/submit/submit.component').then(m => m.SubmitComponent),
   },
   {
+    // Legacy V1 QR code URL alias — old printed QR codes used /Submit-Attendance/:id
+    path: 'Submit-Attendance/:eventId',
+    loadComponent: () =>
+      import('./features/student/submit/submit.component').then(m => m.SubmitComponent),
+  },
+  {
     path: 'nav',
     loadComponent: () =>
       import('./features/dev/dev-nav.component').then(m => m.DevNavComponent),
