@@ -34,15 +34,15 @@ import { UrlContextService } from '../../../core/services/url-context.service';
   template: `
     <app-header></app-header>
 
-    <main class="flex flex-col h-[calc(100vh-48px)]">
+    <main class="flex flex-col" style="height:calc(100vh - 48px)">
 
-      <!-- Loading state -->
+      <!-- Loading -->
       <div *ngIf="loadingEvent" class="flex justify-center py-16">
         <mat-spinner diameter="40"></mat-spinner>
       </div>
 
       <!-- Event load error -->
-      <div *ngIf="eventError" class="error-banner m-6">
+      <div *ngIf="eventError" class="error-banner m-4">
         <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
         <div>
           <p class="font-semibold">Could not load event</p>
@@ -50,83 +50,88 @@ import { UrlContextService } from '../../../core/services/url-context.service';
         </div>
       </div>
 
-      <!-- Event summary bar -->
-      <div *ngIf="event" class="px-4 py-3 bg-white border-b border-gray-100">
-        <div class="flex items-center justify-between flex-wrap gap-3">
-          <div class="flex items-center gap-4">
-            <button mat-icon-button
-                    (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
-                    aria-label="Back to events">
-              <mat-icon>arrow_back</mat-icon>
-            </button>
-            <div>
-              <h2 class="text-base font-semibold text-gray-900">{{ event.eventName }}</h2>
-              <div class="flex gap-3 text-xs text-gray-500 mt-0.5">
-                <span>{{ event.qrMode === 'in-out' ? 'In/Out' : 'Single Scan' }}</span>
-                <span>•</span>
-                <span>{{ hourModeLabel }}</span>
-                <span *ngIf="event.pointsEnabled">• {{ event.pointsValue }}pts/scan</span>
-              </div>
-            </div>
+      <!-- Top bar: back + name + actions -->
+      <div *ngIf="event" class="px-3 py-2 bg-white border-b border-gray-100 shrink-0">
+
+        <!-- Row 1: back button + event name -->
+        <div class="flex items-center gap-2 min-w-0">
+          <button mat-icon-button
+                  (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
+                  aria-label="Back to events">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <div class="flex-1 min-w-0">
+            <h2 class="text-sm font-semibold text-gray-900 truncate">{{ event.eventName }}</h2>
+            <p class="text-xs text-gray-500 mt-0.5">
+              {{ event.qrMode === 'in-out' ? 'In/Out' : 'Single Scan' }}
+              <span class="mx-1">·</span>{{ hourModeLabel }}
+              <span *ngIf="event.pointsEnabled" class="mx-1">·</span>
+              <span *ngIf="event.pointsEnabled">{{ event.pointsValue }}pts</span>
+            </p>
           </div>
-          <div class="flex gap-2">
-            <button mat-stroked-button
-                    (click)="router.navigate(['/teacher/events', eventId, 'qr'], { queryParams: qp })">
-              View QR Codes
-            </button>
-            <button mat-flat-button
-                    (click)="showScanner = !showScanner">
-              {{ showScanner ? 'Hide Scanner' : 'Scan Student' }}
-            </button>
-          </div>
+        </div>
+
+        <!-- Row 2: action buttons -->
+        <div class="flex items-center gap-2 mt-2 pl-10">
+          <button mat-stroked-button class="flex-1"
+                  (click)="router.navigate(['/teacher/events', eventId, 'qr'], { queryParams: qp })">
+            <mat-icon>qr_code</mat-icon>
+            QR Codes
+          </button>
+          <button mat-flat-button class="flex-1"
+                  (click)="showScanner = !showScanner">
+            <mat-icon>{{ showScanner ? 'close' : 'qr_code_scanner' }}</mat-icon>
+            {{ showScanner ? 'Hide' : 'Scan' }}
+          </button>
         </div>
       </div>
 
       <!-- Scanner panel -->
-      <div *ngIf="showScanner" class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex flex-col items-center gap-4">
-        <p class="text-sm font-medium text-gray-600">Scan a student's QR badge to record attendance</p>
+      <div *ngIf="showScanner" class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex flex-col items-center gap-3">
+        <p class="text-sm font-medium text-gray-600 text-center">Scan a student's QR badge</p>
         <app-qr-scanner (scanned)="onStudentScanned($event)"></app-qr-scanner>
-        <div *ngIf="scanError" class="error-banner w-full max-w-md">
+        <div *ngIf="scanError" class="error-banner w-full">
           <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
           <p>{{ scanError }}</p>
         </div>
       </div>
 
       <!-- Stats bar -->
-      <div *ngIf="event" class="grid grid-cols-3 px-4 py-2 bg-gray-50 border-b border-gray-100 gap-4">
+      <div *ngIf="event" class="grid grid-cols-3 px-3 py-2 bg-gray-50 border-b border-gray-100 shrink-0 gap-2">
         <div class="text-center">
-          <p class="text-xl font-bold text-gray-800">{{ attendance.length }}</p>
-          <p class="text-xs text-gray-500">Total Scans</p>
+          <p class="text-lg font-bold text-gray-800">{{ attendance.length }}</p>
+          <p class="text-xs text-gray-500">Scans</p>
         </div>
         <div class="text-center">
-          <p class="text-xl font-bold text-gray-800">{{ uniqueStudents }}</p>
+          <p class="text-lg font-bold text-gray-800">{{ uniqueStudents }}</p>
           <p class="text-xs text-gray-500">Students</p>
         </div>
         <div class="text-center">
-          <p class="text-xl font-bold text-gray-800">{{ totalHours | hoursFormat }}</p>
-          <p class="text-xs text-gray-500">Total Hours</p>
+          <p class="text-lg font-bold text-gray-800">{{ totalHours | hoursFormat }}</p>
+          <p class="text-xs text-gray-500">Hours</p>
         </div>
       </div>
 
       <!-- Attendance load error -->
-      <div *ngIf="attendanceError" class="error-banner mx-6 mt-4">
+      <div *ngIf="attendanceError" class="error-banner mx-3 mt-3">
         <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
         <div>
-          <p class="font-semibold">Could not load attendance records</p>
+          <p class="font-semibold">Could not load attendance</p>
           <p class="mt-0.5 text-red-600">{{ attendanceError }}</p>
         </div>
       </div>
 
       <!-- Attendance grid -->
-      <div *ngIf="event && !attendanceError" class="flex-1 p-4">
+      <div *ngIf="event && !attendanceError" class="flex-1 p-3 min-h-0">
         <div class="flex justify-end mb-2">
-          <button mat-button (click)="exportExcel()" style="color:#6b7280">
-            <mat-icon>download</mat-icon>
+          <button mat-button (click)="exportExcel()" style="color:#6b7280; font-size:12px">
+            <mat-icon style="font-size:16px">download</mat-icon>
             Export Excel
           </button>
         </div>
         <ag-grid-angular
-          class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden shadow-sm"
+          class="ag-theme-alpine w-full rounded-xl overflow-hidden shadow-sm"
+          style="height: calc(100% - 36px)"
           [rowData]="attendance"
           [columnDefs]="columnDefs"
           [gridOptions]="gridOptions"

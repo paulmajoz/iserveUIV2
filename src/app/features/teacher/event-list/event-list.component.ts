@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -41,102 +41,124 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
   template: `
     <app-header></app-header>
 
-    <main class="flex flex-col" style="height: calc(100vh - 56px)">
+    <main class="flex flex-col" style="height: calc(100vh - 48px)">
 
-      <!-- ── Single unified toolbar ────────────────────────────────────────── -->
-      <div class="flex items-center gap-2 px-4 bg-white border-b border-gray-100 flex-wrap shrink-0"
-           style="padding-top:6px; padding-bottom:6px;">
+      <!-- ── Primary toolbar row (never wraps) ─────────────────────────── -->
+      <div class="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 shrink-0">
 
-        <!-- Title -->
-        <h2 class="text-lg font-bold text-gray-800 shrink-0 mr-1">Events</h2>
+        <h2 class="text-base font-bold text-gray-800 shrink-0">Events</h2>
 
-        <!-- Divider -->
-        <div class="h-6 w-px bg-gray-200 shrink-0"></div>
+        <!-- Search fills remaining space -->
+        <div class="flex-1 min-w-0">
+          <mat-form-field appearance="outline" class="compact-field w-full" style="margin-bottom:0">
+            <mat-icon matPrefix style="font-size:16px;width:16px;height:16px;color:#9ca3af">search</mat-icon>
+            <input matInput [formControl]="searchCtrl" (input)="onSearch()" placeholder="Search…">
+          </mat-form-field>
+        </div>
 
-        <!-- Search -->
-        <mat-form-field appearance="outline" class="compact-field" style="width:180px; margin-bottom:0">
-          <mat-icon matPrefix style="font-size:16px;width:16px;height:16px;color:#9ca3af">search</mat-icon>
-          <input matInput [formControl]="searchCtrl" (input)="onSearch()" placeholder="Search…">
-        </mat-form-field>
-
-        <!-- Mode -->
-        <mat-form-field appearance="outline" class="compact-field" style="width:120px; margin-bottom:0">
-          <mat-label>Mode</mat-label>
-          <mat-select [formControl]="filterModeCtrl">
-            <mat-option value="">All</mat-option>
-            <mat-option value="in-out">In / Out</mat-option>
-            <mat-option value="once-off">Once-Off</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <!-- Hours -->
-        <mat-form-field appearance="outline" class="compact-field" style="width:140px; margin-bottom:0">
-          <mat-label>Hours</mat-label>
-          <mat-select [formControl]="filterHoursCtrl">
-            <mat-option value="">All</mat-option>
-            <mat-option value="in-out">In/Out</mat-option>
-            <mat-option value="fixed">Fixed</mat-option>
-            <mat-option value="volume">Volume</mat-option>
-            <mat-option value="disabled">None</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <!-- Points -->
-        <mat-form-field appearance="outline" class="compact-field" style="width:110px; margin-bottom:0">
-          <mat-label>Points</mat-label>
-          <mat-select [formControl]="filterPointsCtrl">
-            <mat-option value="">Any</mat-option>
-            <mat-option value="yes">Yes</mat-option>
-            <mat-option value="no">No</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <!-- Date range -->
-        <label class="toolbar-date-field">
-          <span class="toolbar-date-label">From</span>
-          <input type="date" [formControl]="filterFromCtrl" class="toolbar-date-input">
-        </label>
-
-        <label class="toolbar-date-field">
-          <span class="toolbar-date-label">To</span>
-          <input type="date" [formControl]="filterToCtrl" class="toolbar-date-input">
-        </label>
-
-        <!-- Active filter count + clear -->
-        <ng-container *ngIf="activeFilterCount > 0">
-          <span class="text-xs text-gray-400 shrink-0">
-            {{ filteredEvents.length }}/{{ events.length }}
+        <!-- Filter toggle (mobile only) -->
+        <button mat-icon-button class="md:hidden relative shrink-0"
+                (click)="showFilters = !showFilters"
+                [style.color]="activeFilterCount > 0 ? 'var(--color-primary)' : '#6b7280'"
+                [attr.aria-label]="showFilters ? 'Hide filters' : 'Show filters'">
+          <mat-icon>{{ showFilters ? 'filter_list_off' : 'filter_list' }}</mat-icon>
+          <span *ngIf="activeFilterCount > 0"
+                class="absolute top-1 right-1 w-4 h-4 rounded-full text-white flex items-center justify-center"
+                style="font-size:9px; font-weight:700; background-color:var(--color-primary); line-height:1">
+            {{ activeFilterCount }}
           </span>
-          <button mat-icon-button (click)="clearFilters()"
-                  style="color:#ef4444; width:32px; height:32px;"
-                  [matTooltip]="'Clear ' + activeFilterCount + ' filter' + (activeFilterCount > 1 ? 's' : '')">
-            <mat-icon style="font-size:18px;width:18px;height:18px">filter_list_off</mat-icon>
-          </button>
-        </ng-container>
+        </button>
 
-        <!-- Spacer -->
-        <div class="flex-1"></div>
-
-        <!-- Actions -->
-        <div class="h-6 w-px bg-gray-200 shrink-0"></div>
-
-        <button mat-stroked-button
+        <!-- Export (desktop only) -->
+        <button mat-stroked-button class="hidden md:flex shrink-0"
                 [disabled]="!gridApi || filteredEvents.length === 0"
                 (click)="exportMasterGrid()">
           <mat-icon>download</mat-icon>
           Export
         </button>
 
-        <button mat-flat-button
+        <!-- New Event -->
+        <button mat-flat-button class="shrink-0"
                 (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
           <mat-icon>add</mat-icon>
-          New Event
+          <span class="hidden sm:inline">New Event</span>
         </button>
 
       </div>
 
+      <!-- ── Filter panel (toggle on mobile, always on desktop) ──────────── -->
+      <div *ngIf="showFilters || isDesktop"
+           class="px-3 pb-3 pt-2 bg-white border-b border-gray-100 shrink-0">
+
+        <div class="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
+
+          <mat-form-field appearance="outline" class="compact-field" style="margin-bottom:0">
+            <mat-label>Mode</mat-label>
+            <mat-select [formControl]="filterModeCtrl">
+              <mat-option value="">All</mat-option>
+              <mat-option value="in-out">In / Out</mat-option>
+              <mat-option value="once-off">Once-Off</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="compact-field" style="margin-bottom:0">
+            <mat-label>Hours</mat-label>
+            <mat-select [formControl]="filterHoursCtrl">
+              <mat-option value="">All</mat-option>
+              <mat-option value="in-out">In/Out</mat-option>
+              <mat-option value="fixed">Fixed</mat-option>
+              <mat-option value="volume">Volume</mat-option>
+              <mat-option value="disabled">None</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="compact-field" style="margin-bottom:0">
+            <mat-label>Points</mat-label>
+            <mat-select [formControl]="filterPointsCtrl">
+              <mat-option value="">Any</mat-option>
+              <mat-option value="yes">Yes</mat-option>
+              <mat-option value="no">No</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <label class="toolbar-date-field">
+            <span class="toolbar-date-label">From</span>
+            <input type="date" [formControl]="filterFromCtrl" class="toolbar-date-input">
+          </label>
+
+          <label class="toolbar-date-field">
+            <span class="toolbar-date-label">To</span>
+            <input type="date" [formControl]="filterToCtrl" class="toolbar-date-input">
+          </label>
+
+          <!-- Active filter count + clear -->
+          <ng-container *ngIf="activeFilterCount > 0">
+            <span class="text-xs text-gray-400 shrink-0">
+              {{ filteredEvents.length }}/{{ events.length }}
+            </span>
+            <button mat-icon-button (click)="clearFilters()"
+                    style="color:#ef4444; width:36px; height:36px;"
+                    matTooltip="Clear filters">
+              <mat-icon style="font-size:18px;width:18px;height:18px">filter_list_off</mat-icon>
+            </button>
+          </ng-container>
+
+          <!-- Spacer on desktop -->
+          <div class="hidden md:block flex-1"></div>
+
+          <!-- Export (mobile — inside filter panel) -->
+          <button mat-stroked-button class="col-span-2 md:hidden"
+                  [disabled]="!gridApi || filteredEvents.length === 0"
+                  (click)="exportMasterGrid()">
+            <mat-icon>download</mat-icon>
+            Export
+          </button>
+
+        </div>
+      </div>
+
       <!-- ── API error ────────────────────────────────────────────────────── -->
-      <div *ngIf="apiError" class="error-banner mx-6 mt-4 shrink-0">
+      <div *ngIf="apiError" class="error-banner mx-3 mt-3 shrink-0">
         <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
         <div>
           <p class="font-semibold">Could not load events</p>
@@ -170,7 +192,7 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
       </div>
 
       <!-- ── Master / Detail grid ─────────────────────────────────────────── -->
-      <div *ngIf="!loading && filteredEvents.length > 0" class="flex-1 p-4 min-h-0">
+      <div *ngIf="!loading && filteredEvents.length > 0" class="flex-1 p-3 min-h-0">
         <ag-grid-angular
           class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden shadow-sm"
           [rowData]="filteredEvents"
@@ -201,6 +223,12 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   gridApi: any;
   private detailApis: any[] = [];
+
+  showFilters = false;
+  isDesktop   = typeof window !== 'undefined' && window.innerWidth >= 768;
+
+  @HostListener('window:resize')
+  onResize() { this.isDesktop = window.innerWidth >= 768; }
 
   get qp() {
     const c = this.ctx.context;
