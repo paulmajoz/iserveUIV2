@@ -11,6 +11,11 @@ export interface UserContext {
   grade?: string;
   studentClass?: string;
   studentId?: string;
+  studentHouse?: string;
+  studentTutor?: string;
+  customField1?: string;
+  customField2?: string;
+  customField3?: string;
 }
 
 const CONTEXT_KEY = 'iserve_user_context';
@@ -37,6 +42,11 @@ export class UrlContextService {
         grade: params['grade'],
         studentClass: params['class'],
         studentId: params['studentId'],
+        studentHouse: params['house'],
+        studentTutor: params['tutor'],
+        customField1: params['customField1'],
+        customField2: params['customField2'],
+        customField3: params['customField3'],
       };
       sessionStorage.setItem(CONTEXT_KEY, JSON.stringify(ctx));
       this._context = ctx;

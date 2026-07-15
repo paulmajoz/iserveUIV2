@@ -4,17 +4,13 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MatDividerModule } from '@angular/material/divider';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { QrDisplayComponent } from '../../../shared/components/qr-display/qr-display.component';
-import { EventsService, IEvent } from '../../../core/services/events.service';
+import { GeofencePickerComponent } from '../../../shared/components/geofence-picker/geofence-picker.component';
+import { EventsService, IEvent, GeoTarget } from '../../../core/services/events.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
 
 @Component({
@@ -25,21 +21,17 @@ import { UrlContextService } from '../../../core/services/url-context.service';
     ReactiveFormsModule,
     MatIconModule,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSlideToggleModule,
     MatButtonToggleModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatDividerModule,
     HeaderComponent,
     QrDisplayComponent,
+    GeofencePickerComponent,
   ],
   template: `
     <app-header></app-header>
 
-    <main class="max-w-xl mx-auto px-4 py-4 pb-12">
+    <main class="max-w-xl mx-auto px-3 py-2">
 
       <!-- ═══════════════════════════════════════════════
            FORM VIEW
@@ -47,7 +39,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
       <ng-container *ngIf="view === 'form'">
 
         <!-- Title row: back + heading + clear -->
-        <div class="flex items-center gap-3 my-4">
+        <div class="flex items-center gap-2 my-1">
           <button mat-icon-button
                   (click)="router.navigate(['/teacher/events'], { queryParams: qp })"
                   aria-label="Back to events">
@@ -58,7 +50,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
         </div>
 
         <!-- API error banner -->
-        <div *ngIf="apiError" class="error-banner mb-5">
+        <div *ngIf="apiError" class="error-banner mb-3">
           <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
           <div>
             <p class="font-semibold">Could not create event</p>
@@ -66,147 +58,233 @@ import { UrlContextService } from '../../../core/services/url-context.service';
           </div>
         </div>
 
-        <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4" novalidate>
+        <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-3" novalidate>
 
           <!-- ── Event Details ──────────────────────────── -->
-          <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Event Details</p>
+          <div class="form-card">
+            <p class="card-label">Event Details</p>
 
-            <!-- Event Name -->
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Event Name</mat-label>
-              <input matInput formControlName="eventName" placeholder="e.g. Beach Cleanup 2025">
-              <mat-error *ngIf="form.get('eventName')?.hasError('required')">Event name is required.</mat-error>
-              <mat-error *ngIf="form.get('eventName')?.hasError('minlength')">Must be at least 3 characters.</mat-error>
-            </mat-form-field>
-
-            <!-- Type + Category — always 2 columns, min-width 0 prevents overflow -->
-            <div class="grid grid-cols-2 gap-3">
-              <mat-form-field appearance="outline" class="w-full min-w-0">
-                <mat-label>Type</mat-label>
-                <mat-select formControlName="eventTypeId">
-                  <mat-option value="">None</mat-option>
-                  <mat-option *ngFor="let t of eventTypes" [value]="t._id">{{ t.name }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="typesError">{{ typesError }}</mat-error>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="w-full min-w-0">
-                <mat-label>Category</mat-label>
-                <mat-select formControlName="eventCategoryId">
-                  <mat-option value="">None</mat-option>
-                  <mat-option *ngFor="let c of eventCategories" [value]="c._id">{{ c.name }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="catsError">{{ catsError }}</mat-error>
-              </mat-form-field>
+            <div class="field-wrap">
+              <label class="field-label">Event Name <span class="text-red-400">*</span></label>
+              <input type="text" formControlName="eventName" class="field-input"
+                     placeholder="e.g. Beach Cleanup 2025">
+              <p class="field-error"
+                 *ngIf="form.get('eventName')?.touched && form.get('eventName')?.hasError('required')">
+                Name is required.
+              </p>
+              <p class="field-error"
+                 *ngIf="form.get('eventName')?.touched && form.get('eventName')?.hasError('minlength')">
+                Minimum 3 characters.
+              </p>
             </div>
+
+            <div class="field-wrap">
+              <label class="field-label">Department</label>
+              <select formControlName="department" class="field-select"
+                      (change)="onDepartmentChange(form.get('department')?.value)">
+                <option value="">None</option>
+                <option *ngFor="let d of departments" [value]="d.name">{{ d.name }}</option>
+              </select>
+            </div>
+
+            <div *ngIf="subcategories.length > 0" class="field-wrap">
+              <label class="field-label">Category</label>
+              <select formControlName="category" class="field-select">
+                <option value="">None</option>
+                <option *ngFor="let s of subcategories" [value]="s">{{ s }}</option>
+              </select>
+            </div>
+
+            <p *ngIf="lookupError" class="field-hint" style="color:#d97706">{{ lookupError }}</p>
           </div>
 
-          <!-- ── Hours Tracking ─────────────────────────── -->
-          <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Hours Tracking</p>
+          <!-- ── Tracking ───────────────────────────────── -->
+          <div class="form-card">
 
-            <!-- 2 × 2 hour mode button-toggle -->
-            <mat-button-toggle-group formControlName="hourMode" class="hour-mode-group">
-              <mat-button-toggle *ngFor="let mode of hourModes" [value]="mode.value">
-                <p class="text-xs font-semibold text-gray-800 leading-tight">{{ mode.label }}</p>
-                <p class="text-xs text-gray-400 mt-0.5 leading-tight whitespace-normal">{{ mode.desc }}</p>
-              </mat-button-toggle>
-            </mat-button-toggle-group>
-
-            <!-- Fixed hours -->
-            <div *ngIf="form.get('hourMode')?.value === 'fixed'" class="grid grid-cols-2 gap-3">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Fixed hours per scan</mat-label>
-                <input matInput type="number" formControlName="fixedHours" min="0.5" step="0.5">
-                <mat-error *ngIf="form.get('fixedHours')?.invalid">At least 0.5 hours.</mat-error>
-                <mat-hint>e.g. 1 = one hour</mat-hint>
-              </mat-form-field>
+            <div class="seg-control" style="font-size:12px">
+              <button type="button" class="seg-btn" [class.active]="trackingTab === 'hours'"
+                      (click)="setTrackingTab('hours')">Hours</button>
+              <button type="button" class="seg-btn" [class.active]="trackingTab === 'points'"
+                      (click)="setTrackingTab('points')">Points</button>
+              <button type="button" class="seg-btn" [class.active]="trackingTab === 'none'"
+                      (click)="setTrackingTab('none')">Attendance</button>
             </div>
 
-            <!-- Volume -->
-            <div *ngIf="form.get('hourMode')?.value === 'volume'" class="space-y-3">
+            <!-- Fixed-height zone: Hours and Points panels stacked, inactive ones fade -->
+            <div class="tracking-base">
 
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Unit name</mat-label>
-                <input matInput formControlName="volumeUnitName"
-                       placeholder="e.g. bags collected, km walked">
-                <mat-error *ngIf="form.get('volumeUnitName')?.invalid && form.get('volumeUnitName')?.touched">
-                  Unit name is required.
-                </mat-error>
-              </mat-form-field>
+              <div class="tracking-tab" [class.tracking-tab--active]="trackingTab === 'hours'">
+                <mat-button-toggle-group formControlName="hourMode" class="hour-mode-group" [hideSingleSelectionIndicator]="true">
+                  <mat-button-toggle *ngFor="let m of hourModes" [value]="m.value">
+                    <p class="text-xs font-semibold text-gray-800 leading-tight">{{ m.label }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5 leading-tight">{{ m.desc }}</p>
+                  </mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
 
-              <!-- Conversion rate — responsive row -->
-              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Conversion Rate</p>
-                <div class="grid grid-cols-2 gap-3 items-end">
-                  <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Units</mat-label>
-                    <input matInput type="number" formControlName="volumeUnitsInput" min="0.01" step="any">
-                    <mat-hint>{{ form.get('volumeUnitName')?.value || 'units' }}</mat-hint>
-                    <mat-error *ngIf="form.get('volumeUnitsInput')?.invalid && form.get('volumeUnitsInput')?.touched">Must be &gt; 0.</mat-error>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>= Hours</mat-label>
-                    <input matInput type="number" formControlName="volumeHoursInput" min="0.01" step="any">
-                    <mat-hint>hour(s)</mat-hint>
-                    <mat-error *ngIf="form.get('volumeHoursInput')?.invalid && form.get('volumeHoursInput')?.touched">Must be &gt; 0.</mat-error>
-                  </mat-form-field>
+              <div class="tracking-tab" [class.tracking-tab--active]="trackingTab === 'points'">
+                <mat-button-toggle-group formControlName="pointsMode" class="points-mode-group" [hideSingleSelectionIndicator]="true">
+                  <mat-button-toggle *ngFor="let m of pointsModes" [value]="m.value">
+                    <p class="text-xs font-semibold text-gray-800 leading-tight">{{ m.label }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5 leading-tight">{{ m.desc }}</p>
+                  </mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+
+              <div class="tracking-tab" [class.tracking-tab--active]="trackingTab === 'none'">
+                <div class="none-tab-content">
+                  <i class="fa-solid fa-clipboard-list none-tab-icon"></i>
+                  <p class="none-tab-title">Attendance Only</p>
+                  <p class="none-tab-desc">Track who attended — no hours or points recorded</p>
                 </div>
-                <p class="text-xs text-gray-400">
-                  Preview: 1 {{ form.get('volumeUnitName')?.value || 'unit' }} = <strong>{{ conversionPreview }}</strong>
+              </div>
+
+            </div><!-- /tracking-base -->
+
+            <!-- Expansion fields below the fixed zone -->
+
+            <ng-container *ngIf="trackingTab === 'hours'">
+
+              <div *ngIf="form.get('hourMode')?.value === 'fixed'" class="field-wrap" style="max-width:160px">
+                <label class="field-label">Hours per scan</label>
+                <input type="number" formControlName="fixedHours" class="field-input"
+                       min="0.5" step="0.5" placeholder="e.g. 1">
+                <p class="field-hint">Minimum 0.5 hrs</p>
+                <p class="field-error" *ngIf="form.get('fixedHours')?.invalid && form.get('fixedHours')?.touched">
+                  At least 0.5 hrs.
                 </p>
               </div>
 
-            </div>
-          </div>
-
-          <!-- ── Points ─────────────────────────────────── -->
-          <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Points</p>
-
-            <div class="flex items-center justify-between gap-4 py-1">
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-gray-800">Award points per scan</p>
-                <p class="text-xs text-gray-400 mt-0.5">Students earn points each time they scan in</p>
-              </div>
-              <mat-slide-toggle formControlName="pointsEnabled"></mat-slide-toggle>
-            </div>
-
-            <div *ngIf="form.get('pointsEnabled')?.value">
-              <mat-form-field appearance="outline" style="max-width:200px">
-                <mat-label>Points per scan</mat-label>
-                <input matInput type="number" formControlName="pointsValue" min="1">
-                <mat-error *ngIf="form.get('pointsValue')?.invalid">Must be at least 1 point.</mat-error>
-              </mat-form-field>
-            </div>
-          </div>
-
-          <!-- ── Capture Options ────────────────────────── -->
-          <div class="bg-white border border-gray-200 rounded-lg p-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Additional Capture</p>
-            <div class="space-y-1">
-              <div *ngFor="let opt of captureOpts"
-                   class="flex items-center justify-between gap-4 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors">
-                <div class="flex items-center gap-3 min-w-0">
-                  <span class="text-lg w-7 text-center flex-shrink-0">{{ opt.emoji }}</span>
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium text-gray-800">{{ opt.label }}</p>
-                    <p class="text-xs text-gray-400">{{ opt.desc }}</p>
-                  </div>
+              <div *ngIf="form.get('hourMode')?.value === 'volume'" class="space-y-3">
+                <div class="field-wrap">
+                  <label class="field-label">Unit name</label>
+                  <input type="text" formControlName="volumeUnitName" class="field-input"
+                         placeholder="e.g. bags collected, km walked">
+                  <p class="field-hint">What students will enter a count of</p>
+                  <p class="field-error" *ngIf="form.get('volumeUnitName')?.invalid && form.get('volumeUnitName')?.touched">
+                    Required.
+                  </p>
                 </div>
-                <mat-slide-toggle [formControlName]="opt.key"></mat-slide-toggle>
+                <div class="conversion-card">
+                  <p class="card-label">Conversion Rate</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="field-wrap">
+                      <label class="field-label">Units collected</label>
+                      <input type="number" formControlName="volumeUnitsInput" class="field-input"
+                             min="0.01" step="any" placeholder="e.g. 1">
+                      <p class="field-error" *ngIf="form.get('volumeUnitsInput')?.invalid && form.get('volumeUnitsInput')?.touched">
+                        Must be &gt; 0.
+                      </p>
+                    </div>
+                    <div class="field-wrap">
+                      <label class="field-label">= Hours earned</label>
+                      <input type="number" formControlName="volumeHoursInput" class="field-input"
+                             min="0.01" step="any" placeholder="e.g. 1">
+                      <p class="field-error" *ngIf="form.get('volumeHoursInput')?.invalid && form.get('volumeHoursInput')?.touched">
+                        Must be &gt; 0.
+                      </p>
+                    </div>
+                  </div>
+                  <p class="field-hint">
+                    Preview: 1 {{ form.get('volumeUnitName')?.value || 'unit' }} = <strong>{{ conversionPreview }}</strong>
+                  </p>
+                </div>
               </div>
+
+            </ng-container>
+
+            <ng-container *ngIf="trackingTab === 'points'">
+
+              <div *ngIf="form.get('pointsMode')?.value === 'in-out' || form.get('pointsMode')?.value === 'fixed'"
+                   class="field-wrap" style="max-width:160px">
+                <label class="field-label">Points per scan</label>
+                <input type="number" formControlName="pointsValue" class="field-input"
+                       min="1" placeholder="e.g. 10">
+                <p class="field-hint" *ngIf="form.get('pointsMode')?.value === 'in-out'">Awarded on sign-out only</p>
+                <p class="field-hint" *ngIf="form.get('pointsMode')?.value === 'fixed'">Awarded on each scan</p>
+                <p class="field-error" *ngIf="form.get('pointsValue')?.invalid && form.get('pointsValue')?.touched">
+                  At least 1 point.
+                </p>
+              </div>
+
+              <div *ngIf="form.get('pointsMode')?.value === 'volume'" class="space-y-3">
+                <div class="field-wrap" *ngIf="form.get('hourMode')?.value !== 'volume'">
+                  <label class="field-label">Unit name</label>
+                  <input type="text" formControlName="volumeUnitName" class="field-input"
+                         placeholder="e.g. bags collected, km walked">
+                  <p class="field-hint">What students will enter a count of</p>
+                </div>
+                <div class="conversion-card">
+                  <p class="card-label">Points Conversion</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="field-wrap">
+                      <label class="field-label">Units collected</label>
+                      <input type="number" formControlName="pointsUnitsInput" class="field-input"
+                             min="0.01" step="any" placeholder="e.g. 1">
+                      <p class="field-error" *ngIf="form.get('pointsUnitsInput')?.invalid && form.get('pointsUnitsInput')?.touched">
+                        Must be &gt; 0.
+                      </p>
+                    </div>
+                    <div class="field-wrap">
+                      <label class="field-label">= Points earned</label>
+                      <input type="number" formControlName="pointsPointsInput" class="field-input"
+                             min="0.01" step="any" placeholder="e.g. 5">
+                      <p class="field-error" *ngIf="form.get('pointsPointsInput')?.invalid && form.get('pointsPointsInput')?.touched">
+                        Must be &gt; 0.
+                      </p>
+                    </div>
+                  </div>
+                  <p class="field-hint">
+                    Preview: 1 {{ form.get('volumeUnitName')?.value || 'unit' }} = <strong>{{ pointsConversionPreview }}</strong>
+                  </p>
+                </div>
+              </div>
+
+            </ng-container>
+
+          </div>
+
+          <!-- ── Capture options — always visible, tap to toggle ─────────────── -->
+          <div class="form-card">
+            <p class="card-label">Capture Options</p>
+            <div class="capture-grid">
+              <button type="button" class="capture-tile"
+                      *ngFor="let opt of captureOpts"
+                      [class.capture-tile--active]="form.get(opt.key)?.value"
+                      (click)="form.get(opt.key)?.setValue(!form.get(opt.key)?.value)">
+                <i *ngIf="opt.icon" [class]="opt.icon + ' capture-icon'"></i>
+                <p class="capture-label">{{ opt.label }}</p>
+                <p class="capture-desc">{{ opt.desc }}</p>
+              </button>
+            </div>
+
+            <!-- Geofence picker — only shown when "Geolocation" is enabled -->
+            <div *ngIf="form.get('hasGeolocate')?.value"
+                 class="mt-4 pt-4 border-t border-gray-100 space-y-2">
+              <div class="flex items-baseline justify-between">
+                <p class="card-label !mb-0">Target Location</p>
+                <span class="text-[11px] text-gray-400">
+                  Drop a pin where the event happens. Students who scan within
+                  the radius will be flagged as on-site.
+                </span>
+              </div>
+              <app-geofence-picker
+                [value]="form.get('geoTarget')?.value"
+                (valueChange)="onGeoTargetChange($event)">
+              </app-geofence-picker>
             </div>
           </div>
 
-          <!-- ── Submit ─────────────────────────────────── -->
-          <button mat-flat-button type="submit" [disabled]="loading"
-                  style="width:100%; height:44px; font-size:0.875rem; font-weight:600;">
-            <span class="flex items-center justify-center gap-2">
-              <mat-spinner *ngIf="loading" diameter="18"></mat-spinner>
-              {{ loading ? 'Creating event...' : 'Create Event & Generate QR Codes' }}
-            </span>
-          </button>
+          <!-- ── Submit — sticky so it never jumps when expansion fields change ── -->
+          <div class="submit-sticky">
+            <button mat-flat-button type="submit" [disabled]="loading"
+                    style="width:100%; height:44px; font-size:0.875rem; font-weight:600; border-radius:10px;">
+              <span class="flex items-center justify-center gap-2">
+                <mat-spinner *ngIf="loading" diameter="18"></mat-spinner>
+                {{ loading ? 'Creating event...' : 'Create Event & Generate QR Codes' }}
+              </span>
+            </button>
+          </div>
 
         </form>
       </ng-container>
@@ -291,25 +369,64 @@ export class CreateEventComponent implements OnInit {
   form!: FormGroup;
   loading = false;
   apiError = '';
-  typesError = '';
-  catsError = '';
-  eventTypes: { _id: string; name: string }[] = [];
-  eventCategories: { _id: string; name: string }[] = [];
+  lookupError = '';
 
   view: 'form' | 'qr' = 'form';
   createdEvent?: IEvent;
 
+  /** Controls which tab is active in the Tracking card */
+  trackingTab: 'hours' | 'points' | 'none' = 'hours';
+
+  departments: { name: string; subcategories: string[] }[] = [];
+  subcategories: string[] = [];
+
+  setTrackingTab(tab: 'hours' | 'points' | 'none') {
+    this.trackingTab = tab;
+    const hourCtrl = this.form.get('hourMode');
+    const pointsCtrl = this.form.get('pointsMode');
+
+    // Tabs are mutually exclusive: only one tracking mode is active at a time.
+    // Switching tabs disables the other mode so the resulting event isn't
+    // accidentally configured as both (e.g. "in/out hours + fixed points",
+    // which would generate two QR codes for a points-only event).
+    if (tab === 'hours') {
+      if (hourCtrl?.value === 'disabled') hourCtrl.setValue('in-out');
+      pointsCtrl?.setValue('disabled');
+    } else if (tab === 'points') {
+      if (pointsCtrl?.value === 'disabled') pointsCtrl.setValue('fixed');
+      hourCtrl?.setValue('disabled');
+    } else {
+      hourCtrl?.setValue('disabled');
+      pointsCtrl?.setValue('disabled');
+    }
+  }
+
+  onDepartmentChange(deptName: string) {
+    const dept = this.departments.find(d => d.name === deptName);
+    this.subcategories = dept?.subcategories ?? [];
+    if (!this.subcategories.includes(this.form.get('category')?.value ?? '')) {
+      this.form.get('category')?.setValue('');
+    }
+  }
+
   readonly hourModes = [
-    { value: 'in-out',   label: 'In/Out Duration', desc: 'Calculated from sign-in to sign-out time' },
-    { value: 'fixed',    label: 'Fixed Hours',      desc: 'Set a fixed value per scan' },
-    { value: 'volume',   label: 'Volume-based',     desc: 'Units entered × conversion rate' },
-    { value: 'disabled', label: 'No Hours',         desc: 'Track attendance only' },
+    { value: 'in-out',   label: 'In / Out',  desc: 'Time from sign-in to sign-out' },
+    { value: 'fixed',    label: 'Fixed',      desc: 'Set hours per scan' },
+    { value: 'volume',   label: 'Volume',     desc: 'Units × conversion rate' },
+    { value: 'disabled', label: 'No Hours',   desc: 'No hours tracked' },
+  ] as const;
+
+  readonly pointsModes = [
+    { value: 'in-out',   label: 'In / Out',  desc: 'Points from sign-in to sign-out' },
+    { value: 'fixed',    label: 'Fixed',      desc: 'Set points per scan' },
+    { value: 'volume',   label: 'Volume',     desc: 'Units × conversion rate' },
+    { value: 'disabled', label: 'No Points',  desc: 'No points tracked' },
   ] as const;
 
   readonly captureOpts = [
-    { key: 'hasDescription', label: 'Description', desc: 'Student describes what they did',       emoji: '✏️' },
-    { key: 'hasReflection',  label: 'Reflection',  desc: 'Student writes a personal reflection',  emoji: '💬' },
-    { key: 'hasGeolocate',   label: 'Geolocation', desc: 'Capture GPS coordinates on scan',       emoji: '📍' },
+    { key: 'hasDescription', label: 'Description', desc: 'Student describes what they did',      icon: 'fa-solid fa-pen-to-square' },
+    { key: 'hasReflection',  label: 'Reflection',  desc: 'Student writes a personal reflection', icon: 'fa-solid fa-lightbulb' },
+    { key: 'hasGeolocate',   label: 'Geolocation', desc: 'Capture GPS coordinates on scan',      icon: 'fa-solid fa-location-dot' },
   ];
 
   get conversionPreview(): string {
@@ -321,6 +438,14 @@ export class CreateEventComponent implements OnInit {
       return `${rounded}h`;
     }
     return `${Math.round(rate * 60)} min`;
+  }
+
+  get pointsConversionPreview(): string {
+    const units  = +(this.form?.get('pointsUnitsInput')?.value  ?? 1) || 1;
+    const points = +(this.form?.get('pointsPointsInput')?.value ?? 1) || 1;
+    const rate   = points / units;
+    const rounded = Math.round(rate * 100) / 100;
+    return `${rounded} pts`;
   }
 
   get qp() {
@@ -340,46 +465,56 @@ export class CreateEventComponent implements OnInit {
     this.buildForm();
 
     const schoolId = this.ctx.schoolId;
-    this.eventsService.getEventTypes(schoolId).subscribe({
-      next: t  => (this.eventTypes = t),
-      error: () => (this.typesError = 'Could not load event types'),
-    });
-    this.eventsService.getEventCategories(schoolId).subscribe({
-      next: c  => (this.eventCategories = c),
-      error: () => (this.catsError = 'Could not load categories'),
+    this.eventsService.getSchoolLookup(schoolId).subscribe({
+      next: ({ departments }) => {
+        this.departments = departments;
+      },
+      error: () => (this.lookupError = 'Could not load departments for this school'),
     });
   }
 
   private buildForm() {
     this.form = this.fb.group({
-      eventName:       ['', [Validators.required, Validators.minLength(3)]],
-      eventTypeId:     [''],
-      eventCategoryId: [''],
-      hourMode:        ['in-out',   Validators.required],
-      fixedHours:      [1,          [Validators.min(0.5)]],
-      volumeUnitName:  [''],
-      volumeUnitsInput:[1,          [Validators.required, Validators.min(0.01)]],
-      volumeHoursInput:[1,          [Validators.required, Validators.min(0.01)]],
-      pointsEnabled:   [false],
-      pointsValue:     [10,         [Validators.min(1)]],
-      hasDescription:  [false],
-      hasReflection:   [false],
-      hasGeolocate:    [false],
+      eventName:         ['', [Validators.required, Validators.minLength(3)]],
+      department:        [''],
+      category:          [''],
+      hourMode:          ['in-out',   Validators.required],
+      fixedHours:        [1,          [Validators.min(0.5)]],
+      volumeUnitName:    [''],
+      volumeUnitsInput:  [1,          [Validators.required, Validators.min(0.01)]],
+      volumeHoursInput:  [1,          [Validators.required, Validators.min(0.01)]],
+      pointsMode:        ['disabled', Validators.required],
+      pointsValue:       [10,         [Validators.min(1)]],
+      pointsUnitsInput:  [1,          [Validators.required, Validators.min(0.01)]],
+      pointsPointsInput: [10,         [Validators.required, Validators.min(0.01)]],
+      hasDescription:    [false],
+      hasReflection:     [false],
+      hasGeolocate:      [false],
+      geoTarget:         [null as GeoTarget | null],
     });
+  }
+
+  /** Called by the geofence picker; writes back into the reactive form. */
+  onGeoTargetChange(target: GeoTarget | null) {
+    this.form.get('geoTarget')?.setValue(target);
   }
 
   clearForm() {
     this.form.reset({
-      eventName: '', eventTypeId: '', eventCategoryId: '',
+      eventName: '', department: '', category: '',
       hourMode: 'in-out',
       fixedHours: 1,
       volumeUnitName: '', volumeUnitsInput: 1, volumeHoursInput: 1,
-      pointsEnabled: false, pointsValue: 10,
+      pointsMode: 'disabled', pointsValue: 10,
+      pointsUnitsInput: 1, pointsPointsInput: 10,
       hasDescription: false, hasReflection: false, hasGeolocate: false,
+      geoTarget: null,
     });
     this.apiError = '';
     this.createdEvent = undefined;
     this.view = 'form';
+    this.trackingTab = 'hours';
+    this.form.get('hourMode')?.setValue('in-out');
   }
 
   submit() {
@@ -390,7 +525,14 @@ export class CreateEventComponent implements OnInit {
     const v = this.form.value;
     const c = this.ctx.context;
 
-    const qrMode = v.hourMode === 'in-out' ? 'in-out' : 'once-off';
+    // Two QR codes (sign-in + sign-out) are only needed when EITHER hours
+    // OR points are measured between an in-scan and an out-scan. Fixed /
+    // volume / disabled modes only ever need a single scan, so we produce
+    // a once-off QR for them.
+    const qrMode =
+      (v.hourMode === 'in-out' || v.pointsMode === 'in-out')
+        ? 'in-out'
+        : 'once-off';
 
     const dto: any = {
       eventName:     v.eventName,
@@ -399,21 +541,30 @@ export class CreateEventComponent implements OnInit {
       teacherEmail:  c?.email ?? '',
       qrMode,
       hourMode:      v.hourMode,
-      pointsEnabled: v.pointsEnabled,
-      pointsValue:   v.pointsEnabled ? v.pointsValue : 0,
+      pointsMode:    v.pointsMode,
+      pointsEnabled: v.pointsMode !== 'disabled',
+      pointsValue:   (v.pointsMode === 'fixed' || v.pointsMode === 'in-out') ? (+v.pointsValue || 0) : 0,
       captureOptions: {
         hasDescription: v.hasDescription,
         hasReflection:  v.hasReflection,
         hasGeolocate:   v.hasGeolocate,
       },
+      // Only send geoTarget if geolocation is enabled AND a centre has been picked.
+      geoTarget: v.hasGeolocate && v.geoTarget ? v.geoTarget : null,
     };
 
-    if (v.eventTypeId)     dto.eventTypeId     = v.eventTypeId;
-    if (v.eventCategoryId) dto.eventCategoryId = v.eventCategoryId;
+    if (v.department) dto.department = v.department;
+    if (v.category)   dto.category   = v.category;
+
     if (v.hourMode === 'fixed')  dto.fixedHours = v.fixedHours;
+    if (v.hourMode === 'volume' || v.pointsMode === 'volume') {
+      dto.volumeUnitName = v.volumeUnitName;
+    }
     if (v.hourMode === 'volume') {
-      dto.volumeUnitName   = v.volumeUnitName;
       dto.volumeConversion = (+v.volumeHoursInput || 1) / (+v.volumeUnitsInput || 1);
+    }
+    if (v.pointsMode === 'volume') {
+      dto.pointsConversion = (+v.pointsPointsInput || 1) / (+v.pointsUnitsInput || 1);
     }
 
     this.eventsService.createEvent(dto).subscribe({

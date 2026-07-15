@@ -5,8 +5,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { QrDisplayComponent } from '../../../shared/components/qr-display/qr-display.component';
+import { EmailQrDialogComponent, EmailQrDialogResult } from '../../../shared/components/email-qr-dialog/email-qr-dialog.component';
 import { EventsService, IEvent } from '../../../core/services/events.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
 
@@ -19,6 +21,7 @@ import { UrlContextService } from '../../../core/services/url-context.service';
     MatButtonModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatDialogModule,
     HeaderComponent,
     QrDisplayComponent,
   ],
@@ -128,6 +131,7 @@ export class QrManagerComponent implements OnInit {
     private eventsService: EventsService,
     public ctx: UrlContextService,
     private snack: MatSnackBar,
+    private dialog: MatDialog,
   ) {}
 
   private isValidId(id: string): boolean {
@@ -171,12 +175,38 @@ export class QrManagerComponent implements OnInit {
   }
 
   sendEmail() {
+    if (!this.event) return;
     this.emailError = '';
-    this.eventsService.sendEmail(this.eventId).subscribe({
-      next: () => this.snack.open('Email sent successfully!', 'Close', { duration: 3000 }),
-      error: err => {
-        this.emailError = err?.error?.message ?? err?.message ?? 'Failed to send email. Please check your email settings.';
+
+    // Pre-fill with the currently-logged-in user's email so the most common
+    // case (teacher emails themselves the PDFs) is a single click.
+    const defaultRecipient = this.ctx.context?.email ?? this.event.teacherEmail;
+
+    const ref = this.dialog.open<EmailQrDialogComponent, any, EmailQrDialogResult>(
+      EmailQrDialogComponent,
+      {
+        width: 'min(480px, 92vw)',
+        data: {
+          eventName: this.event.eventName,
+          defaultRecipient,
+        },
       },
+    );
+
+    ref.afterClosed().subscribe((result) => {
+      if (!result || !result.recipients?.length) return;
+      this.eventsService.sendEmail(this.eventId, result.recipients).subscribe({
+        next: () => this.snack.open(
+          `Email sent to ${result.recipients.join(', ')}`,
+          'Close',
+          { duration: 3500 },
+        ),
+        error: err => {
+          this.emailError = err?.error?.message
+            ?? err?.message
+            ?? 'Failed to send email. Please check your email settings.';
+        },
+      });
     });
   }
 }

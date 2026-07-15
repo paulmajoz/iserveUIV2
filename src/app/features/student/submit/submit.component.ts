@@ -85,10 +85,19 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
                 <span class="text-gray-500">Event</span>
                 <span class="font-medium text-gray-800 text-right ml-4">{{ event?.eventName }}</span>
               </div>
-              <div *ngIf="event?.pointsEnabled" class="flex justify-between">
-                <span class="text-gray-500">Points on sign-in</span>
+              <!-- Fixed points preview -->
+              <div *ngIf="event?.pointsMode === 'fixed' || (!event?.pointsMode && event?.pointsEnabled)"
+                   class="flex justify-between">
+                <span class="text-gray-500">Points awarded</span>
                 <span class="font-semibold" style="color: var(--color-primary)">
                   +{{ event?.pointsValue }}
+                </span>
+              </div>
+              <!-- Volume points preview -->
+              <div *ngIf="event?.pointsMode === 'volume'" class="flex justify-between">
+                <span class="text-gray-500">Points per {{ event?.volumeUnitName || 'unit' }}</span>
+                <span class="font-semibold" style="color: var(--color-primary)">
+                  {{ event?.pointsConversion }} pts
                 </span>
               </div>
               <div *ngIf="event?.hourMode === 'fixed'" class="flex justify-between">
@@ -101,46 +110,9 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               </div>
             </div>
 
-            <!-- Optional fields -->
-            <ng-container
-              *ngIf="event?.captureOptions?.hasDescription || event?.captureOptions?.hasReflection || event?.hourMode === 'volume'">
-              <form [formGroup]="optionalForm" class="bg-white rounded-2xl shadow-sm p-5 space-y-4" novalidate>
-                <p class="form-section-label">Additional Information</p>
-
-                <mat-form-field *ngIf="event?.captureOptions?.hasDescription" appearance="outline" class="w-full">
-                  <mat-label>Description</mat-label>
-                  <textarea matInput formControlName="description" rows="3"
-                            placeholder="Describe your contribution..."></textarea>
-                  <mat-hint>Tell us what you did</mat-hint>
-                  <mat-error *ngIf="optionalForm.get('description')?.invalid">
-                    A description is required for this event.
-                  </mat-error>
-                </mat-form-field>
-
-                <mat-form-field *ngIf="event?.captureOptions?.hasReflection" appearance="outline" class="w-full">
-                  <mat-label>Reflection</mat-label>
-                  <textarea matInput formControlName="reflection" rows="3"
-                            placeholder="Reflect on your experience..."></textarea>
-                  <mat-hint>What did you learn or feel?</mat-hint>
-                  <mat-error *ngIf="optionalForm.get('reflection')?.invalid">
-                    A reflection is required for this event.
-                  </mat-error>
-                </mat-form-field>
-
-                <mat-form-field *ngIf="event?.hourMode === 'volume'" appearance="outline" class="w-full">
-                  <mat-label>How many {{ event?.volumeUnitName || 'units' }}?</mat-label>
-                  <input matInput type="number" formControlName="unitAmount" min="0" step="1"
-                         placeholder="e.g. 5">
-                  <mat-hint>{{ volumeHint }}</mat-hint>
-                  <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('required')">
-                    Please enter an amount.
-                  </mat-error>
-                  <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('min')">
-                    Must be 0 or more.
-                  </mat-error>
-                </mat-form-field>
-              </form>
-            </ng-container>
+            <!-- Optional fields (once-off events collect them on the IN scan) -->
+            <ng-container *ngIf="showInfoFormOnIn"
+                          [ngTemplateOutlet]="infoFormTpl"></ng-container>
 
             <!-- Submission error -->
             <div *ngIf="submitError" class="error-banner">
@@ -150,7 +122,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
 
             <button mat-flat-button type="button"
                     (click)="confirmIn()"
-                    [disabled]="submitting || optionalForm.invalid"
+                    [disabled]="submitting || (showInfoFormOnIn && optionalForm.invalid)"
                     style="width:100%; height:52px; font-size:1rem; font-weight:600;">
               <span class="flex items-center justify-center gap-2">
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
@@ -189,6 +161,10 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
               </div>
             </div>
 
+            <!-- Optional fields (in-out events collect them on the OUT scan) -->
+            <ng-container *ngIf="showInfoFormOnOut"
+                          [ngTemplateOutlet]="infoFormTpl"></ng-container>
+
             <!-- Submission error -->
             <div *ngIf="submitError" class="error-banner">
               <mat-icon class="shrink-0 text-red-500">error_outline</mat-icon>
@@ -197,7 +173,7 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
 
             <button mat-flat-button type="button"
                     (click)="confirmOut()"
-                    [disabled]="submitting"
+                    [disabled]="submitting || (showInfoFormOnOut && optionalForm.invalid)"
                     style="width:100%; height:52px; font-size:1rem; font-weight:600;
                            --mdc-filled-button-container-color: #f97316;">
               <span class="flex items-center justify-center gap-2">
@@ -207,6 +183,85 @@ type PageState = 'loading' | 'confirm-in' | 'confirm-out' | 'success' | 'already
             </button>
 
           </ng-container>
+
+          <!-- ── Reusable optional-info form ─────────────────────── -->
+          <ng-template #infoFormTpl>
+            <form [formGroup]="optionalForm" class="bg-white rounded-2xl shadow-sm p-5 space-y-4" novalidate>
+              <p class="form-section-label">Additional Information</p>
+
+              <mat-form-field *ngIf="event?.captureOptions?.hasDescription" appearance="outline" class="w-full">
+                <mat-label>Description</mat-label>
+                <textarea matInput formControlName="description" rows="3"
+                          placeholder="Describe your contribution..."></textarea>
+                <mat-hint>Tell us what you did</mat-hint>
+                <mat-error *ngIf="optionalForm.get('description')?.invalid">
+                  A description is required for this event.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field *ngIf="event?.captureOptions?.hasReflection" appearance="outline" class="w-full">
+                <mat-label>Reflection</mat-label>
+                <textarea matInput formControlName="reflection" rows="3"
+                          placeholder="Reflect on your experience..."></textarea>
+                <mat-hint>What did you learn or feel?</mat-hint>
+                <mat-error *ngIf="optionalForm.get('reflection')?.invalid">
+                  A reflection is required for this event.
+                </mat-error>
+              </mat-form-field>
+
+              <!-- Geolocation -->
+              <div *ngIf="event?.captureOptions?.hasGeolocate"
+                   class="border border-gray-200 rounded-xl p-4 space-y-2">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-location-dot text-gray-400"></i>
+                  <p class="text-sm font-medium text-gray-700">Location</p>
+                </div>
+
+                <p *ngIf="!geolocationValue" class="text-xs text-gray-500">
+                  We need to capture your current location for this event.
+                </p>
+
+                <div *ngIf="geolocationValue"
+                     class="text-xs flex items-center gap-2 text-green-600">
+                  <mat-icon class="!text-base">check_circle</mat-icon>
+                  Location captured
+                  <span class="text-gray-400 font-mono ml-auto">{{ geolocationValue }}</span>
+                </div>
+
+                <button mat-stroked-button type="button"
+                        (click)="captureLocation()"
+                        [disabled]="geoCapturing"
+                        style="width:100%; height:40px; font-weight:500;">
+                  <span class="flex items-center justify-center gap-2">
+                    <mat-spinner *ngIf="geoCapturing" diameter="16"></mat-spinner>
+                    <mat-icon *ngIf="!geoCapturing" class="!text-base">my_location</mat-icon>
+                    {{ geoCapturing ? 'Getting location…' : (geolocationValue ? 'Re-capture' : 'Capture my location') }}
+                  </span>
+                </button>
+
+                <p *ngIf="geoError" class="text-xs text-red-500">{{ geoError }}</p>
+
+                <mat-error *ngIf="optionalForm.get('geolocation')?.invalid && optionalForm.get('geolocation')?.touched"
+                           class="text-xs">
+                  Location is required for this event.
+                </mat-error>
+              </div>
+
+              <!-- Unit amount — shown when hours OR points use volume mode -->
+              <mat-form-field *ngIf="needsUnitAmount" appearance="outline" class="w-full">
+                <mat-label>How many {{ event?.volumeUnitName || 'units' }}?</mat-label>
+                <input matInput type="number" formControlName="unitAmount" min="0" step="1"
+                       placeholder="e.g. 5">
+                <mat-hint>{{ volumeHint }}</mat-hint>
+                <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('required')">
+                  Please enter an amount.
+                </mat-error>
+                <mat-error *ngIf="optionalForm.get('unitAmount')?.hasError('min')">
+                  Must be 0 or more.
+                </mat-error>
+              </mat-form-field>
+            </form>
+          </ng-template>
 
           <!-- ── Success ───────────────────────────── -->
           <div *ngIf="state === 'success'"
@@ -269,6 +324,11 @@ export class SubmitComponent implements OnInit {
   studentId = '';
   studentFirst = '';
   studentLast = '';
+  studentHouse = '';
+  studentTutor = '';
+  customField1 = '';
+  customField2 = '';
+  customField3 = '';
 
   optionalForm!: FormGroup;
 
@@ -277,25 +337,52 @@ export class SubmitComponent implements OnInit {
       || this.studentEmail[0]?.toUpperCase() || '?';
   }
 
-  get volumeHint(): string {
-    const conv  = this.event?.volumeConversion ?? 1;
-    const unit  = this.event?.volumeUnitName   ?? 'unit';
-    const amount = this.optionalForm?.get('unitAmount')?.value;
+  /** True when at least one of hours/points uses volume mode and needs a unit count */
+  get needsUnitAmount(): boolean {
+    return this.event?.hourMode === 'volume' || this.event?.pointsMode === 'volume';
+  }
 
-    if (conv >= 1) {
-      const hrs = Math.round(conv * 100) / 100;
-      const suffix = hrs >= 1 ? `${hrs}h` : `${Math.round(conv * 60)} min`;
-      const preview = amount > 0
-        ? `  ·  ${amount} ${unit} = ${this.fmtHours(amount * conv)}`
-        : '';
-      return `Each ${unit} = ${suffix}${preview}`;
-    } else {
-      const unitsPerHour = Math.round((1 / conv) * 100) / 100;
-      const preview = amount > 0
-        ? `  ·  ${amount} ${unit} = ${this.fmtHours(amount * conv)}`
-        : '';
-      return `Every ${unitsPerHour} ${unit} = 1h${preview}`;
+  /** True when the event needs ANY of the optional info fields (description / reflection / geolocation / volume amount). */
+  get hasAnyCaptureField(): boolean {
+    const o = this.event?.captureOptions;
+    return !!(o?.hasDescription || o?.hasReflection || o?.hasGeolocate) || this.needsUnitAmount;
+  }
+
+  /** Show the optional-info form on the sign-IN card (once-off events only). */
+  get showInfoFormOnIn(): boolean {
+    return this.event?.qrMode === 'once-off' && this.hasAnyCaptureField;
+  }
+
+  /** Show the optional-info form on the sign-OUT card (in-out events). */
+  get showInfoFormOnOut(): boolean {
+    return this.event?.qrMode === 'in-out' && this.hasAnyCaptureField;
+  }
+
+  /** Geolocation capture state */
+  geoCapturing = false;
+  geoError = '';
+
+  get volumeHint(): string {
+    const unit   = this.event?.volumeUnitName ?? 'unit';
+    const amount = +(this.optionalForm?.get('unitAmount')?.value ?? 0);
+    const parts: string[] = [];
+
+    if (this.event?.hourMode === 'volume') {
+      const conv = this.event.volumeConversion ?? 1;
+      const suffix = conv >= 1
+        ? `${Math.round(conv * 100) / 100}h`
+        : `${Math.round(conv * 60)} min`;
+      parts.push(`1 ${unit} = ${suffix} hrs`);
+      if (amount > 0) parts.push(`${amount} ${unit} = ${this.fmtHours(amount * conv)}`);
     }
+
+    if (this.event?.pointsMode === 'volume') {
+      const pConv = this.event.pointsConversion ?? 1;
+      parts.push(`1 ${unit} = ${Math.round(pConv * 100) / 100} pts`);
+      if (amount > 0) parts.push(`${amount} ${unit} = ${Math.round(amount * pConv)} pts`);
+    }
+
+    return parts.join('  ·  ');
   }
 
   private fmtHours(hours: number): string {
@@ -325,15 +412,21 @@ export class SubmitComponent implements OnInit {
     this.studentEmail = c?.email        ?? params['email']   ?? '';
     this.studentFirst = c?.firstName    ?? params['first']   ?? '';
     this.studentLast  = c?.lastName     ?? params['last']    ?? '';
-    this.studentGrade = c?.grade        ?? params['grade']   ?? '';
-    this.studentClass = c?.studentClass ?? params['class']   ?? '';
-    this.studentId    = c?.studentId    ?? params['studentId'] ?? '';
+    this.studentGrade = c?.grade        ?? params['grade']       ?? '';
+    this.studentClass = c?.studentClass ?? params['class']       ?? '';
+    this.studentId    = c?.studentId    ?? params['studentId']   ?? '';
+    this.studentHouse = c?.studentHouse ?? params['house']       ?? '';
+    this.studentTutor = c?.studentTutor ?? params['tutor']       ?? '';
+    this.customField1 = c?.customField1 ?? params['customField1'] ?? '';
+    this.customField2 = c?.customField2 ?? params['customField2'] ?? '';
+    this.customField3 = c?.customField3 ?? params['customField3'] ?? '';
     this.displayName  = [this.studentFirst, this.studentLast].filter(Boolean).join(' ') || this.studentEmail;
 
     this.optionalForm = this.fb.group({
       description: [''],
       reflection:  [''],
       unitAmount:  [null, [Validators.min(0)]],
+      geolocation: [''],
     });
 
     if (!/^[a-f\d]{24}$/i.test(eventId)) {
@@ -352,7 +445,10 @@ export class SubmitComponent implements OnInit {
         if (event.captureOptions?.hasReflection) {
           this.optionalForm.get('reflection')?.setValidators(Validators.required);
         }
-        if (event.hourMode === 'volume') {
+        if (event.captureOptions?.hasGeolocate) {
+          this.optionalForm.get('geolocation')?.setValidators(Validators.required);
+        }
+        if (event.hourMode === 'volume' || event.pointsMode === 'volume') {
           this.optionalForm.get('unitAmount')?.setValidators([Validators.required, Validators.min(0)]);
         }
         this.optionalForm.updateValueAndValidity();
@@ -372,7 +468,9 @@ export class SubmitComponent implements OnInit {
   }
 
   confirmIn() {
-    if (this.optionalForm.invalid) { this.optionalForm.markAllAsTouched(); return; }
+    if (this.showInfoFormOnIn && this.optionalForm.invalid) {
+      this.optionalForm.markAllAsTouched(); return;
+    }
     if (!this.event || !this.studentEmail) return;
     this.submitting = true;
     this.submitError = '';
@@ -386,11 +484,20 @@ export class SubmitComponent implements OnInit {
       studentLastName:  this.studentLast   || undefined,
       studentGrade:     this.studentGrade  || undefined,
       studentClass:     this.studentClass  || undefined,
+      studentHouse:     this.studentHouse  || undefined,
+      studentTutor:     this.studentTutor  || undefined,
+      customField1:     this.customField1  || undefined,
+      customField2:     this.customField2  || undefined,
+      customField3:     this.customField3  || undefined,
       studentId:        this.studentId     || undefined,
       schoolId:         String(this.ctx.schoolId),
-      description:      v.description      || undefined,
-      reflection:       v.reflection       || undefined,
-      unitAmount:       v.unitAmount       ?? undefined,
+      // Optional info is collected on the IN scan only for once-off events.
+      ...(this.showInfoFormOnIn ? {
+        description: v.description || undefined,
+        reflection:  v.reflection  || undefined,
+        unitAmount:  v.unitAmount  ?? undefined,
+        locationIn:  v.geolocation || undefined,
+      } : {}),
     };
 
     this.attendanceService.submit(payload).subscribe({
@@ -412,15 +519,26 @@ export class SubmitComponent implements OnInit {
   }
 
   confirmOut() {
+    if (this.showInfoFormOnOut && this.optionalForm.invalid) {
+      this.optionalForm.markAllAsTouched(); return;
+    }
     if (!this.event || !this.studentEmail) return;
     this.submitting = true;
     this.submitError = '';
 
+    const v = this.optionalForm.value;
     const payload: SubmitAttendancePayload = {
       eventId:      this.event._id,
       studentEmail: this.studentEmail,
       direction:    'out',
       schoolId:     String(this.ctx.schoolId),
+      // Optional info is collected on the OUT scan for in-out events.
+      ...(this.showInfoFormOnOut ? {
+        description: v.description || undefined,
+        reflection:  v.reflection  || undefined,
+        unitAmount:  v.unitAmount  ?? undefined,
+        locationOut: v.geolocation || undefined,
+      } : {}),
     };
 
     this.attendanceService.submit(payload).subscribe({
@@ -434,6 +552,35 @@ export class SubmitComponent implements OnInit {
         this.submitError = err?.error?.message ?? err?.message ?? 'Sign-out failed. Please try again.';
       },
     });
+  }
+
+  /** Capture the device's current GPS coords and stamp them into the form. */
+  captureLocation() {
+    if (!('geolocation' in navigator)) {
+      this.geoError = 'Your browser does not support location services.';
+      return;
+    }
+    this.geoError = '';
+    this.geoCapturing = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = `${pos.coords.latitude.toFixed(6)},${pos.coords.longitude.toFixed(6)}`;
+        this.optionalForm.get('geolocation')?.setValue(coords);
+        this.optionalForm.get('geolocation')?.markAsTouched();
+        this.geoCapturing = false;
+      },
+      (err) => {
+        this.geoCapturing = false;
+        this.geoError = err.code === err.PERMISSION_DENIED
+          ? 'Location permission denied. Please allow location access and try again.'
+          : 'Couldn\'t get your location. Please try again.';
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  }
+
+  get geolocationValue(): string {
+    return this.optionalForm?.get('geolocation')?.value ?? '';
   }
 
   formatHours(hours: number): string {

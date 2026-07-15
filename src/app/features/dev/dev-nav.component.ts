@@ -14,17 +14,22 @@ interface Preset {
   grade: string;
   studentClass: string;
   schoolId: number;
+  house?: string;
+  tutor?: string;
+  customField1?: string;
+  customField2?: string;
+  customField3?: string;
 }
 
 const PRESETS: Preset[] = [
   { label: 'Ms Naidoo',    role: 'Staff',   email: 'snaidoo@kingsmead.co.za',              firstName: 'Sarah',  lastName: 'Naidoo',  grade: '',   studentClass: '',    schoolId: 11338 },
   { label: 'Mr Pillay',    role: 'Staff',   email: 'jpillay@kingsmead.co.za',              firstName: 'John',   lastName: 'Pillay',  grade: '',   studentClass: '',    schoolId: 11338 },
   { label: 'Mr Coetzee',   role: 'Staff',   email: 'jcoetzee@kingsmead.co.za',             firstName: 'James',  lastName: 'Coetzee', grade: '',   studentClass: '',    schoolId: 11338 },
-  { label: 'Alice Gr10',   role: 'Student', email: 'alice.smith@student.kingsmead.co.za',  firstName: 'Alice',  lastName: 'Smith',   grade: '10', studentClass: '10A', schoolId: 11338 },
-  { label: 'Bob Gr10',     role: 'Student', email: 'bob.jones@student.kingsmead.co.za',    firstName: 'Bob',    lastName: 'Jones',   grade: '10', studentClass: '10B', schoolId: 11338 },
-  { label: 'Chloe Gr11',   role: 'Student', email: 'chloe.nkosi@student.kingsmead.co.za',  firstName: 'Chloe',  lastName: 'Nkosi',   grade: '11', studentClass: '11A', schoolId: 11338 },
-  { label: 'David Gr11',   role: 'Student', email: 'david.patel@student.kingsmead.co.za',  firstName: 'David',  lastName: 'Patel',   grade: '11', studentClass: '11B', schoolId: 11338 },
-  { label: 'Emma Gr9',     role: 'Student', email: 'emma.coetzee@student.kingsmead.co.za', firstName: 'Emma',   lastName: 'Coetzee', grade: '9',  studentClass: '9A',  schoolId: 11338 },
+  { label: 'Alice Gr10',   role: 'Student', email: 'alice.smith@student.kingsmead.co.za',  firstName: 'Alice',  lastName: 'Smith',   grade: '10', studentClass: '10A', schoolId: 11338, house: 'Kingsley',  tutor: 'Ms Smith',   customField1: 'Hockey',   customField2: 'Choir',  customField3: '' },
+  { label: 'Bob Gr10',     role: 'Student', email: 'bob.jones@student.kingsmead.co.za',    firstName: 'Bob',    lastName: 'Jones',   grade: '10', studentClass: '10B', schoolId: 11338, house: 'Founders',  tutor: 'Mr Pillay',  customField1: 'Rugby',    customField2: '',       customField3: '' },
+  { label: 'Chloe Gr11',   role: 'Student', email: 'chloe.nkosi@student.kingsmead.co.za',  firstName: 'Chloe',  lastName: 'Nkosi',   grade: '11', studentClass: '11A', schoolId: 11338, house: 'Kingsley',  tutor: 'Ms Naidoo',  customField1: 'Netball',  customField2: 'Drama',  customField3: '' },
+  { label: 'David Gr11',   role: 'Student', email: 'david.patel@student.kingsmead.co.za',  firstName: 'David',  lastName: 'Patel',   grade: '11', studentClass: '11B', schoolId: 11338, house: 'Founders',  tutor: 'Mr Coetzee', customField1: 'Cricket',  customField2: '',       customField3: '' },
+  { label: 'Emma Gr9',     role: 'Student', email: 'emma.coetzee@student.kingsmead.co.za', firstName: 'Emma',   lastName: 'Coetzee', grade: '9',  studentClass: '9A',  schoolId: 11338, house: 'Beaumont',  tutor: 'Mr Pillay',  customField1: 'Swimming', customField2: 'Art',    customField3: '' },
 ];
 
 interface NavLink    { label: string; url: string; desc?: string; badge?: string; tag?: string; }
@@ -113,6 +118,31 @@ interface NavSection { title: string; emoji: string; color: string; links: NavLi
             <div>
               <label class="field-label">Class</label>
               <input type="text" [(ngModel)]="ctx.studentClass" placeholder="e.g. 10A" class="field-input text-sm" />
+            </div>
+
+            <div>
+              <label class="field-label">House</label>
+              <input type="text" [(ngModel)]="ctx.house" placeholder="e.g. Kingsley" class="field-input text-sm" />
+            </div>
+
+            <div>
+              <label class="field-label">Tutor</label>
+              <input type="text" [(ngModel)]="ctx.tutor" placeholder="e.g. Ms Smith" class="field-input text-sm" />
+            </div>
+
+            <div>
+              <label class="field-label">Custom 1</label>
+              <input type="text" [(ngModel)]="ctx.customField1" placeholder="e.g. Hockey" class="field-input text-sm" />
+            </div>
+
+            <div>
+              <label class="field-label">Custom 2</label>
+              <input type="text" [(ngModel)]="ctx.customField2" placeholder="e.g. Choir" class="field-input text-sm" />
+            </div>
+
+            <div>
+              <label class="field-label">Custom 3</label>
+              <input type="text" [(ngModel)]="ctx.customField3" placeholder="" class="field-input text-sm" />
             </div>
 
           </div>
@@ -219,10 +249,15 @@ export class DevNavComponent implements OnInit {
       role:     this.ctx.role,
       schoolId: String(this.ctx.schoolId),
     });
-    if (this.ctx.firstName)    p.set('first',   this.ctx.firstName);
-    if (this.ctx.lastName)     p.set('last',    this.ctx.lastName);
-    if (this.ctx.grade)        p.set('grade',   this.ctx.grade);
-    if (this.ctx.studentClass) p.set('class',   this.ctx.studentClass);
+    if (this.ctx.firstName)    p.set('first',        this.ctx.firstName);
+    if (this.ctx.lastName)     p.set('last',         this.ctx.lastName);
+    if (this.ctx.grade)        p.set('grade',        this.ctx.grade);
+    if (this.ctx.studentClass) p.set('class',        this.ctx.studentClass);
+    if (this.ctx.house)        p.set('house',        this.ctx.house);
+    if (this.ctx.tutor)        p.set('tutor',        this.ctx.tutor);
+    if (this.ctx.customField1) p.set('customField1', this.ctx.customField1);
+    if (this.ctx.customField2) p.set('customField2', this.ctx.customField2);
+    if (this.ctx.customField3) p.set('customField3', this.ctx.customField3);
     return p.toString();
   }
 
@@ -371,10 +406,15 @@ export class DevNavComponent implements OnInit {
       role,
       schoolId: String(this.ctx.schoolId),
     });
-    if (this.ctx.firstName)    p.set('first',  this.ctx.firstName);
-    if (this.ctx.lastName)     p.set('last',   this.ctx.lastName);
-    if (this.ctx.grade)        p.set('grade',  this.ctx.grade);
-    if (this.ctx.studentClass) p.set('class',  this.ctx.studentClass);
+    if (this.ctx.firstName)    p.set('first',        this.ctx.firstName);
+    if (this.ctx.lastName)     p.set('last',         this.ctx.lastName);
+    if (this.ctx.grade)        p.set('grade',        this.ctx.grade);
+    if (this.ctx.studentClass) p.set('class',        this.ctx.studentClass);
+    if (this.ctx.house)        p.set('house',        this.ctx.house);
+    if (this.ctx.tutor)        p.set('tutor',        this.ctx.tutor);
+    if (this.ctx.customField1) p.set('customField1', this.ctx.customField1);
+    if (this.ctx.customField2) p.set('customField2', this.ctx.customField2);
+    if (this.ctx.customField3) p.set('customField3', this.ctx.customField3);
     return p.toString();
   }
 
@@ -384,10 +424,15 @@ export class DevNavComponent implements OnInit {
       role:     p.role,
       schoolId: String(p.schoolId),
     });
-    if (p.firstName)    params.set('first',  p.firstName);
-    if (p.lastName)     params.set('last',   p.lastName);
-    if (p.grade)        params.set('grade',  p.grade);
-    if (p.studentClass) params.set('class',  p.studentClass);
+    if (p.firstName)    params.set('first',        p.firstName);
+    if (p.lastName)     params.set('last',         p.lastName);
+    if (p.grade)        params.set('grade',        p.grade);
+    if (p.studentClass) params.set('class',        p.studentClass);
+    if (p.house)        params.set('house',        p.house);
+    if (p.tutor)        params.set('tutor',        p.tutor);
+    if (p.customField1) params.set('customField1', p.customField1);
+    if (p.customField2) params.set('customField2', p.customField2);
+    if (p.customField3) params.set('customField3', p.customField3);
     return params.toString();
   }
 }

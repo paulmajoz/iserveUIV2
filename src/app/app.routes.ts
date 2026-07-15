@@ -39,19 +39,26 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/student/dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
+      {
+        path: 'scan',
+        loadComponent: () =>
+          import('./features/student/scan/scan.component').then(m => m.ScanComponent),
+      },
     ],
   },
   {
-    // QR scan landing — public, no auth needed
+    // QR scan landing — public, no auth needed.
+    // Re-uses the unified scan component; it skips the in-app scanner step
+    // when an eventId is present in the URL.
     path: 'submit/:eventId',
     loadComponent: () =>
-      import('./features/student/submit/submit.component').then(m => m.SubmitComponent),
+      import('./features/student/scan/scan.component').then(m => m.ScanComponent),
   },
   {
     // Legacy V1 QR code URL alias — old printed QR codes used /Submit-Attendance/:id
     path: 'Submit-Attendance/:eventId',
     loadComponent: () =>
-      import('./features/student/submit/submit.component').then(m => m.SubmitComponent),
+      import('./features/student/scan/scan.component').then(m => m.ScanComponent),
   },
   {
     path: 'nav',

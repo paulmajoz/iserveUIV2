@@ -8,6 +8,11 @@ export interface IEvent {
   school: string;
   teacher: string;
   teacherEmail: string;
+  /** School-defined department (plain string) */
+  department?: string;
+  /** School-defined category (plain string) */
+  category?: string;
+  /** Legacy ObjectId refs from migrated V1 events */
   eventTypeId?: string;
   eventCategoryId?: string;
   qrMode: 'in-out' | 'once-off';
@@ -15,13 +20,24 @@ export interface IEvent {
   fixedHours?: number;
   volumeUnitName?: string;
   volumeConversion?: number;
-  pointsEnabled: boolean;
+  pointsMode: 'disabled' | 'in-out' | 'fixed' | 'volume';
   pointsValue: number;
+  pointsConversion: number;
+  /** Derived: true when pointsMode !== 'disabled' */
+  pointsEnabled: boolean;
   captureOptions: { hasGeolocate: boolean; hasDescription: boolean; hasReflection: boolean };
+  geoTarget?: GeoTarget | null;
   qrCodeIn?: string;
   qrCodeOut?: string;
   isActive: boolean;
   createdAt: string;
+}
+
+export interface GeoTarget {
+  lat: number;
+  lon: number;
+  radiusMeters: number;
+  label?: string;
 }
 
 export interface CreateEventPayload {
@@ -29,16 +45,19 @@ export interface CreateEventPayload {
   school: string;
   teacher: string;
   teacherEmail: string;
-  eventTypeId?: string;
-  eventCategoryId?: string;
+  department?: string;
+  category?: string;
   qrMode: 'in-out' | 'once-off';
   hourMode: 'in-out' | 'fixed' | 'volume' | 'disabled';
   fixedHours?: number;
   volumeUnitName?: string;
   volumeConversion?: number;
-  pointsEnabled: boolean;
+  pointsMode: 'disabled' | 'in-out' | 'fixed' | 'volume';
   pointsValue: number;
+  pointsConversion?: number;
+  pointsEnabled: boolean;
   captureOptions: { hasGeolocate: boolean; hasDescription: boolean; hasReflection: boolean };
+  geoTarget?: GeoTarget | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -69,15 +88,32 @@ export class EventsService {
     return this.api.getBlob(`events/${id}/qr-pdf`, { direction });
   }
 
-  sendEmail(id: string): Observable<unknown> {
-    return this.api.post(`events/${id}/send-email`, {});
+  /**
+   * Email the event's QR codes.
+   * @param recipients Optional list. Omit to fall back to the event teacher.
+   */
+  sendEmail(id: string, recipients?: string[]): Observable<unknown> {
+    return this.api.post(`events/${id}/send-email`, recipients?.length ? { recipients } : {});
   }
 
-  getEventTypes(schoolId?: number): Observable<{ _id: string; name: string }[]> {
-    return this.api.get('event-types', schoolId ? { schoolId } : {});
+  /** Returns the school's departments (with nested subcategories) for the Create Event form */
+  getSchoolLookup(schoolId: number): Observable<{ departments: { name: string; subcategories: string[] }[] }> {
+    return this.api.get(`schools/id/${schoolId}/lookup`);
   }
 
-  getEventCategories(schoolId?: number): Observable<{ _id: string; name: string }[]> {
-    return this.api.get('event-categories', schoolId ? { schoolId } : {});
+  /** Returns distinct people at the school for the email-recipient picker. */
+  getSchoolContacts(schoolId: number): Observable<{
+    teachers: SchoolContact[];
+    students: SchoolContact[];
+  }> {
+    return this.api.get(`schools/id/${schoolId}/contacts`);
   }
+}
+
+export interface SchoolContact {
+  email: string;
+  name?: string;
+  role: 'Staff' | 'Student';
+  grade?: string;
+  studentClass?: string;
 }

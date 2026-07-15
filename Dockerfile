@@ -3,9 +3,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
-RUN npx ng build --configuration production
+RUN npx ng build --configuration production --base-href=/new/
 
-FROM nginx:alpine
-COPY --from=builder /app/dist/iserve-uiv2/browser /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:20-alpine
+RUN npm install -g serve
+WORKDIR /usr/src/app
+COPY --from=builder /app/dist/iserve-uiv2/browser .
 EXPOSE 80
+CMD ["serve", "-s", ".", "-l", "80"]

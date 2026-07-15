@@ -4,22 +4,29 @@ import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ModuleRegistry, ColDef, GridOptions, GridReadyEvent } from 'ag-grid-community';
-import { LicenseManager, MasterDetailModule, ExcelExportModule } from 'ag-grid-enterprise';
+import { LicenseManager, MasterDetailModule, ExcelExportModule, MenuModule, ClipboardModule } from 'ag-grid-enterprise';
 import * as XLSX from 'xlsx';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { EventsService, IEvent } from '../../../core/services/events.service';
-import { AttendanceService, IAttendance } from '../../../core/services/attendance.service';
+import { AttendanceService, IAttendance, UpdateAttendancePayload } from '../../../core/services/attendance.service';
+import {
+  EditAttendanceDialogComponent,
+  EditAttendanceDialogData,
+  EditAttendanceDialogResult,
+} from '../event-detail/edit-attendance-dialog.component';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { environment } from '../../../../environments/environment';
 
-ModuleRegistry.registerModules([MasterDetailModule, ExcelExportModule]);
+ModuleRegistry.registerModules([MasterDetailModule, ExcelExportModule, MenuModule, ClipboardModule]);
 if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLicense);
 
 @Component({
@@ -30,30 +37,51 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
     ReactiveFormsModule,
     MatIconModule,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatSnackBarModule,
+    MatDialogModule,
     AgGridAngular,
     HeaderComponent,
+    EditAttendanceDialogComponent,
   ],
   template: `
     <app-header></app-header>
 
     <main class="flex flex-col" style="height: calc(100vh - 48px)">
 
-      <!-- ── Primary toolbar row (never wraps) ─────────────────────────── -->
+      <!-- ── Primary toolbar row ───────────────────────────────────────── -->
       <div class="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 shrink-0">
 
         <h2 class="text-base font-bold text-gray-800 shrink-0">Events</h2>
 
-        <!-- Search fills remaining space -->
-        <div class="flex-1 min-w-0">
-          <mat-form-field appearance="outline" class="compact-field w-full" style="margin-bottom:0">
-            <mat-icon matPrefix style="font-size:16px;width:16px;height:16px;color:#9ca3af">search</mat-icon>
-            <input matInput [formControl]="searchCtrl" (input)="onSearch()" placeholder="Search…">
-          </mat-form-field>
+        <!-- Smart Search -->
+        <div class="flex-1 min-w-0 relative">
+          <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:#9ca3af;pointer-events:none;z-index:1"></i>
+          <input type="search" [formControl]="searchCtrl"
+                 (input)="onSearch()"
+                 (focus)="onSearchFocus()"
+                 (blur)="onSearchBlur()"
+                 placeholder="Search events…"
+                 class="field-input w-full"
+                 style="padding-left:30px"
+                 autocomplete="off">
+
+          <!-- Search suggestions dropdown -->
+          <div *ngIf="showSearchSuggestions && searchSuggestions.length > 0"
+               class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+            <button *ngFor="let suggestion of searchSuggestions; let isLast = last"
+                    type="button"
+                    (click)="selectSearchSuggestion(suggestion)"
+                    class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors"
+                    [style.border-bottom]="!isLast ? '1px solid #f3f4f6' : 'none'">
+              <div class="font-medium text-gray-900">{{ suggestion.label }}</div>
+              <div class="text-xs text-gray-500">{{ suggestion.meta }}</div>
+            </button>
+          </div>
         </div>
 
         <!-- Filter toggle (mobile only) -->
@@ -64,7 +92,7 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
           <mat-icon>{{ showFilters ? 'filter_list_off' : 'filter_list' }}</mat-icon>
           <span *ngIf="activeFilterCount > 0"
                 class="absolute top-1 right-1 w-4 h-4 rounded-full text-white flex items-center justify-center"
-                style="font-size:9px; font-weight:700; background-color:var(--color-primary); line-height:1">
+                style="font-size:9px;font-weight:700;background-color:var(--color-primary);line-height:1">
             {{ activeFilterCount }}
           </span>
         </button>
@@ -77,82 +105,83 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
           Export
         </button>
 
-        <!-- New Event -->
-        <button mat-flat-button class="shrink-0"
-                (click)="router.navigate(['/teacher/events/create'], { queryParams: qp })">
-          <mat-icon>add</mat-icon>
-          <span class="hidden sm:inline">New Event</span>
-        </button>
+        <!-- "New Event" button removed — kept the empty-state CTA further down
+             so the very first event can still be created from this page. -->
 
       </div>
 
       <!-- ── Filter panel (toggle on mobile, always on desktop) ──────────── -->
       <div *ngIf="showFilters || isDesktop"
-           class="px-3 pb-3 pt-2 bg-white border-b border-gray-100 shrink-0">
+           class="px-2 py-2 bg-white border-b border-gray-100 shrink-0">
 
-        <div class="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
+        <div class="flex flex-wrap gap-2 items-end">
 
-          <mat-form-field appearance="outline" class="compact-field" style="margin-bottom:0">
-            <mat-label>Mode</mat-label>
-            <mat-select [formControl]="filterModeCtrl">
-              <mat-option value="">All</mat-option>
-              <mat-option value="in-out">In / Out</mat-option>
-              <mat-option value="once-off">Once-Off</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <!-- Mode -->
+          <div class="field-wrap-compact" style="width:100px">
+            <label class="field-label-compact">Mode</label>
+            <select [formControl]="filterModeCtrl" class="field-input-compact">
+              <option value="">All</option>
+              <option value="in-out">In / Out</option>
+              <option value="once-off">Once-Off</option>
+            </select>
+          </div>
 
-          <mat-form-field appearance="outline" class="compact-field" style="margin-bottom:0">
-            <mat-label>Hours</mat-label>
-            <mat-select [formControl]="filterHoursCtrl">
-              <mat-option value="">All</mat-option>
-              <mat-option value="in-out">In/Out</mat-option>
-              <mat-option value="fixed">Fixed</mat-option>
-              <mat-option value="volume">Volume</mat-option>
-              <mat-option value="disabled">None</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <!-- Tracking -->
+          <div class="field-wrap-compact" style="width:140px">
+            <label class="field-label-compact">Tracking</label>
+            <select [formControl]="filterTrackingCtrl" class="field-input-compact">
+              <option value="all">All Events</option>
+              <option value="hours">Hours Only</option>
+              <option value="points">Points Only</option>
+              <option value="attendance">Attendance</option>
+            </select>
+          </div>
 
-          <mat-form-field appearance="outline" class="compact-field" style="margin-bottom:0">
-            <mat-label>Points</mat-label>
-            <mat-select [formControl]="filterPointsCtrl">
-              <mat-option value="">Any</mat-option>
-              <mat-option value="yes">Yes</mat-option>
-              <mat-option value="no">No</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <!-- Department -->
+          <div class="field-wrap-compact" style="width:100px">
+            <label class="field-label-compact">Dept</label>
+            <select [formControl]="filterDeptCtrl" class="field-input-compact">
+              <option value="">All</option>
+              <option *ngFor="let d of departments" [value]="d">{{ d }}</option>
+            </select>
+          </div>
 
-          <label class="toolbar-date-field">
-            <span class="toolbar-date-label">From</span>
-            <input type="date" [formControl]="filterFromCtrl" class="toolbar-date-input">
-          </label>
+          <!-- Category filter is hidden for now — kept in form/code for future use. -->
 
-          <label class="toolbar-date-field">
-            <span class="toolbar-date-label">To</span>
-            <input type="date" [formControl]="filterToCtrl" class="toolbar-date-input">
-          </label>
+
+          <!-- From date -->
+          <div class="field-wrap-compact" style="width:140px">
+            <label class="field-label-compact">From</label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-date">
+              <input matInput [matDatepicker]="fromPicker" [formControl]="filterFromCtrl"
+                     placeholder="Start date" (click)="fromPicker.open()" readonly>
+              <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+              <mat-datepicker #fromPicker></mat-datepicker>
+            </mat-form-field>
+          </div>
+
+          <!-- To date -->
+          <div class="field-wrap-compact" style="width:140px">
+            <label class="field-label-compact">To</label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-date">
+              <input matInput [matDatepicker]="toPicker" [formControl]="filterToCtrl"
+                     placeholder="End date" (click)="toPicker.open()" readonly
+                     [min]="filterFromCtrl.value">
+              <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+              <mat-datepicker #toPicker></mat-datepicker>
+            </mat-form-field>
+          </div>
 
           <!-- Active filter count + clear -->
           <ng-container *ngIf="activeFilterCount > 0">
-            <span class="text-xs text-gray-400 shrink-0">
+            <span class="text-xs text-gray-500 font-medium shrink-0" style="padding-top:20px">
               {{ filteredEvents.length }}/{{ events.length }}
             </span>
-            <button mat-icon-button (click)="clearFilters()"
-                    style="color:#ef4444; width:36px; height:36px;"
-                    matTooltip="Clear filters">
-              <mat-icon style="font-size:18px;width:18px;height:18px">filter_list_off</mat-icon>
+            <button mat-stroked-button (click)="clearFilters()"
+                    style="height:32px;color:#ef4444;border-color:#ef4444;font-size:11px;padding:0 8px;flex-shrink:0">
+              Clear
             </button>
           </ng-container>
-
-          <!-- Spacer on desktop -->
-          <div class="hidden md:block flex-1"></div>
-
-          <!-- Export (mobile — inside filter panel) -->
-          <button mat-stroked-button class="col-span-2 md:hidden"
-                  [disabled]="!gridApi || filteredEvents.length === 0"
-                  (click)="exportMasterGrid()">
-            <mat-icon>download</mat-icon>
-            Export
-          </button>
 
         </div>
       </div>
@@ -192,7 +221,7 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
       </div>
 
       <!-- ── Master / Detail grid ─────────────────────────────────────────── -->
-      <div *ngIf="!loading && filteredEvents.length > 0" class="flex-1 p-3 min-h-0">
+      <div *ngIf="!loading && filteredEvents.length > 0" class="flex-1 px-3 pt-3 pb-4 min-h-0">
         <ag-grid-angular
           class="ag-theme-alpine w-full h-full rounded-xl overflow-hidden shadow-sm"
           [rowData]="filteredEvents"
@@ -214,18 +243,32 @@ export class EventListComponent implements OnInit, OnDestroy {
   loading = true;
   apiError = '';
 
-  searchCtrl       = new FormControl('');
-  filterModeCtrl   = new FormControl('');
-  filterHoursCtrl  = new FormControl('');
-  filterPointsCtrl = new FormControl('');
-  filterFromCtrl   = new FormControl('');
-  filterToCtrl     = new FormControl('');
+  searchCtrl        = new FormControl('');
+  filterModeCtrl    = new FormControl('');
+  filterTrackingCtrl = new FormControl('all'); // all | hours | points | attendance
+  filterDeptCtrl    = new FormControl('');
+  filterCategoryCtrl = new FormControl('');
+  filterFromCtrl    = new FormControl('');
+  filterToCtrl      = new FormControl('');
+
+  // Cache of unique departments and categories for filter dropdowns
+  departments: string[] = [];
+  categories: string[] = [];
 
   gridApi: any;
   private detailApis: any[] = [];
+  private attendeeCounts: Map<string, number> = new Map();
+  /** Per-event count of attendance records flagged as on-site (within the event's geofence). */
+  private onSiteCounts: Map<string, number> = new Map();
+  /** Per-event count of attendance records that have a perimeter measurement (on or off site). */
+  private perimeterMeasuredCounts: Map<string, number> = new Map();
 
   showFilters = false;
   isDesktop   = typeof window !== 'undefined' && window.innerWidth >= 768;
+
+  // Smart search
+  searchSuggestions: any[] = [];
+  showSearchSuggestions = false;
 
   @HostListener('window:resize')
   onResize() { this.isDesktop = window.innerWidth >= 768; }
@@ -236,8 +279,14 @@ export class EventListComponent implements OnInit, OnDestroy {
   }
 
   get activeFilterCount(): number {
-    return [this.filterModeCtrl, this.filterHoursCtrl, this.filterPointsCtrl,
-            this.filterFromCtrl, this.filterToCtrl].filter(c => !!c.value).length;
+    return [
+      this.filterModeCtrl.value,
+      this.filterTrackingCtrl.value !== 'all' ? true : false,
+      this.filterDeptCtrl.value,
+      this.filterCategoryCtrl.value,
+      this.filterFromCtrl.value,
+      this.filterToCtrl.value,
+    ].filter(Boolean).length;
   }
 
   // ── Master columns ────────────────────────────────────────────────────────
@@ -269,6 +318,55 @@ export class EventListComponent implements OnInit, OnDestroy {
           : '<span class="text-gray-400 text-sm">—</span>',
     },
     {
+      colId: 'department', field: 'department', headerName: 'Department', width: 120,
+      valueFormatter: (p: any) => p.value || '—',
+    },
+    // Category column hidden for now — kept commented for future use.
+    // {
+    //   colId: 'category', field: 'category', headerName: 'Category', width: 120,
+    //   valueFormatter: (p: any) => p.value || '—',
+    // },
+    {
+      colId: 'attendeeCount', headerName: 'Attendees', width: 100,
+      valueGetter: (p: any) => this.getAttendeeCount(p.data._id),
+    },
+    {
+      colId: 'onSite',
+      headerName: 'On-site',
+      width: 130,
+      sortable: true,
+      tooltipValueGetter: (p: any) => {
+        if (!p.data.captureOptions?.hasGeolocate) return 'Geolocation not enabled for this event';
+        if (!p.data.geoTarget) return 'Geolocation enabled, but no target location was set';
+        const measured = this.perimeterMeasuredCounts.get(p.data._id) ?? 0;
+        const onSite = this.onSiteCounts.get(p.data._id) ?? 0;
+        return `${onSite} of ${measured} attendees with a captured location were within the perimeter.`;
+      },
+      valueGetter: (p: any) => {
+        if (!p.data.captureOptions?.hasGeolocate || !p.data.geoTarget) return -1;
+        const measured = this.perimeterMeasuredCounts.get(p.data._id) ?? 0;
+        return measured === 0 ? 0 : (this.onSiteCounts.get(p.data._id) ?? 0) / measured;
+      },
+      cellRenderer: (p: any) => {
+        if (!p.data.captureOptions?.hasGeolocate || !p.data.geoTarget) {
+          return '<span class="text-xs text-gray-400">—</span>';
+        }
+        const measured = this.perimeterMeasuredCounts.get(p.data._id) ?? 0;
+        const onSite = this.onSiteCounts.get(p.data._id) ?? 0;
+        if (measured === 0) {
+          return '<span class="text-xs text-gray-400">No scans</span>';
+        }
+        const offSite = measured - onSite;
+        const tone = offSite === 0 ? 'green' : (onSite === 0 ? 'red' : 'amber');
+        const colours: Record<string, string> = {
+          green: 'bg-green-100 text-green-700',
+          amber: 'bg-amber-100 text-amber-700',
+          red:   'bg-red-100 text-red-700',
+        };
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colours[tone]}">${onSite}/${measured} on-site</span>`;
+      },
+    },
+    {
       colId: 'createdAt', field: 'createdAt', headerName: 'Created', width: 130, sort: 'desc',
       valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : '—',
     },
@@ -280,22 +378,29 @@ export class EventListComponent implements OnInit, OnDestroy {
       sortable: false,
       filter: false,
       cellRenderer: (p: any) => `
-        <div class="flex items-center gap-2 h-full">
-          <button data-action="qr" data-id="${p.data._id}"
-            class="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white transition-opacity hover:opacity-80"
+        <div class="flex items-center justify-end gap-1.5 h-full">
+          <button type="button" data-action="qr" data-id="${p.data._id}" aria-label="Open QR codes"
+            class="event-action-btn"
             style="background-color:var(--color-secondary)">QR</button>
-          <button data-action="detail" data-id="${p.data._id}"
-            class="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white transition-opacity hover:opacity-80"
+          <button type="button" data-action="detail" data-id="${p.data._id}" aria-label="Open event"
+            class="event-action-btn"
             style="background-color:var(--color-primary)">Open</button>
         </div>`,
       onCellClicked: (p: any) => {
-        const btn = (p.event as MouseEvent).composedPath()
-          .find((el: any) => el.dataset?.action) as HTMLElement | undefined;
+        const target = p.event?.target as HTMLElement | null;
+        const btn = target?.closest('[data-action]') as HTMLElement | null;
         if (!btn) return;
-        if (btn.dataset['action'] === 'qr')
-          this.router.navigate(['/teacher/events', p.data._id, 'qr'], { queryParams: this.qp });
-        if (btn.dataset['action'] === 'detail')
-          this.router.navigate(['/teacher/events', p.data._id], { queryParams: this.qp });
+        // Stop AG Grid's row-click handler from also firing (it would toggle
+        // the master-detail expansion right under the click).
+        p.event?.stopPropagation?.();
+        const action = btn.dataset['action'];
+        const id = btn.dataset['id'] ?? p.data?._id;
+        if (!id) return;
+        if (action === 'qr') {
+          this.router.navigate(['/teacher/events', id, 'qr'], { queryParams: this.qp });
+        } else if (action === 'detail') {
+          this.router.navigate(['/teacher/events', id], { queryParams: this.qp });
+        }
       },
     },
   ];
@@ -307,6 +412,8 @@ export class EventListComponent implements OnInit, OnDestroy {
     private attendanceService: AttendanceService,
     public ctx: UrlContextService,
     public router: Router,
+    private snack: MatSnackBar,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit() {
@@ -315,16 +422,20 @@ export class EventListComponent implements OnInit, OnDestroy {
       (eventId: string, eventName: string) => this.exportEventAttendees(eventId, eventName);
 
     // ── Subscribe to filter changes ───────────────────────────────────────
-    [this.filterModeCtrl, this.filterHoursCtrl, this.filterPointsCtrl,
-     this.filterFromCtrl, this.filterToCtrl]
+    [this.filterModeCtrl, this.filterTrackingCtrl,
+     this.filterDeptCtrl, this.filterCategoryCtrl, this.filterFromCtrl, this.filterToCtrl]
       .forEach(ctrl => ctrl.valueChanges.subscribe(() => this.applyFilters()));
 
     // ── Grid options ──────────────────────────────────────────────────────
     this.gridOptions = {
       defaultColDef: { resizable: true, sortable: true },
-      pagination: true,
-      paginationPageSize: 25,
-      rowHeight: 36,
+      // Pagination disabled — the grid renders the full row set and scrolls
+      // internally inside the flex container.
+      pagination: false,
+      // Slightly taller rows so the action buttons have proper breathing
+      // room — especially on touch devices where the global stylesheet
+      // bumps `.event-action-btn` to 32px.
+      rowHeight: 42,
       rowGroupPanelShow: 'never',
       pivotPanelShow:    'never',
 
@@ -338,8 +449,11 @@ export class EventListComponent implements OnInit, OnDestroy {
 
       // ── Master / Detail ────────────────────────────────────────────────
       masterDetail: true,
-      // fixed height: 40px panel header + 34px col headers + 10×32px rows + 34px pagination bar = 428
-      detailRowHeight: 428,
+      // Fixed pixel height for the detail panel. The inner grid scrolls
+      // vertically when there are more attendees than fit (40 px panel
+      // header + 34 px col headers + N × 32 px rows; everything beyond
+      // ~12 rows scrolls inside the panel).
+      detailRowHeight: 460,
       embedFullWidthRows: true,
       isRowMaster: () => true,
 
@@ -373,10 +487,26 @@ export class EventListComponent implements OnInit, OnDestroy {
           rowHeight: 32,
           defaultColDef: { resizable: true, sortable: true },
           suppressCellFocus: true,
-          pagination: true,
-          paginationPageSize: 10,
+          // No pagination — full list, vertical scroll within the 460 px panel
+          pagination: false,
           rowGroupPanelShow: 'never',
           pivotPanelShow:    'never',
+          getContextMenuItems: (params: any) => {
+            if (!params.node?.data) return ['copy', 'export'];
+            const record = params.node.data as IAttendance;
+            const event = this.events.find(e => e._id === record.eventId);
+            if (!event) return ['copy', 'export'];
+            return [
+              {
+                name: 'Edit Attendance',
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+                action: () => this.openEditAttendanceDialog(record, event),
+              },
+              'separator',
+              'copy',
+              'export',
+            ];
+          },
 
           onGridReady: (e: any) => {
             this.detailApis.push(e.api);
@@ -392,24 +522,30 @@ export class EventListComponent implements OnInit, OnDestroy {
 
           columnDefs: [
             {
-              colId: 'student', headerName: 'Student', flex: 2, minWidth: 120,
+              colId: 'student', headerName: 'Student', flex: 3, minWidth: 160,
               valueGetter: (p: any) =>
                 [p.data.studentFirstName, p.data.studentLastName].filter(Boolean).join(' ')
                 || p.data.studentEmail,
             },
-            { colId: 'studentEmail', field: 'studentEmail', headerName: 'Email', flex: 2, minWidth: 140 },
+            // Email column hidden — student is identified by name now.
             {
               colId: 'gradeClass', headerName: 'Grade / Class', width: 120,
               valueGetter: (p: any) =>
                 [p.data.studentGrade, p.data.studentClass].filter(Boolean).join(' · ') || '—',
             },
+            { colId: 'studentHouse', field: 'studentHouse', headerName: 'House', width: 100, filter: 'agTextColumnFilter' },
+            { colId: 'studentTutor', field: 'studentTutor', headerName: 'Tutor', width: 100, filter: 'agTextColumnFilter' },
             {
               colId: 'timeIn', field: 'timeIn', headerName: 'Time In', width: 150,
-              valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '—',
+              valueFormatter: (p: any) => p.value
+                ? new Date(p.value).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                : '—',
             },
             {
               colId: 'timeOut', field: 'timeOut', headerName: 'Time Out', width: 150,
-              valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleString() : '—',
+              valueFormatter: (p: any) => p.value
+                ? new Date(p.value).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                : '—',
             },
             {
               colId: 'hours', field: 'hours', headerName: 'Hours', width: 90,
@@ -425,6 +561,21 @@ export class EventListComponent implements OnInit, OnDestroy {
                 p.value > 0
                   ? `<span class="font-semibold" style="color:var(--color-primary)">${p.value}</span>`
                   : '<span class="text-gray-400">0</span>',
+            },
+            {
+              colId: 'location', headerName: 'On-site', width: 130,
+              tooltipValueGetter: (p: any) => {
+                const d = p.data?.distanceMeters;
+                if (d == null) return 'No location captured for this scan';
+                return `Captured ${d}m from the event target.`;
+              },
+              cellRenderer: (p: any) => {
+                const w = p.data?.withinPerimeter;
+                const d = p.data?.distanceMeters;
+                if (w === true)  return `<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">On-site${d != null ? ' · ' + d + 'm' : ''}</span>`;
+                if (w === false) return `<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">Off-site · ${d}m</span>`;
+                return '<span class="text-xs text-gray-400">—</span>';
+              },
             },
             {
               colId: 'source', field: 'source', headerName: 'Source', width: 100,
@@ -457,6 +608,37 @@ export class EventListComponent implements OnInit, OnDestroy {
         this.events = events;
         this.filteredEvents = events;
         this.loading = false;
+
+        // Extract unique departments and categories
+        const depts = new Set<string>();
+        const cats = new Set<string>();
+        events.forEach(e => {
+          if (e.department) depts.add(e.department);
+          if (e.category) cats.add(e.category);
+        });
+        this.departments = Array.from(depts).sort();
+        this.categories = Array.from(cats).sort();
+
+        // Load attendance counts for all events (incl. geofence breakdown).
+        // Counts are tracked in maps; the value-getter columns read them, so
+        // we have to tell AG Grid to re-evaluate after each fetch settles.
+        events.forEach(e => {
+          this.attendanceService.getByEvent(e._id).subscribe({
+            next: records => {
+              this.attendeeCounts.set(e._id, records.length);
+              const measured = records.filter(r => r.withinPerimeter !== null && r.withinPerimeter !== undefined);
+              this.perimeterMeasuredCounts.set(e._id, measured.length);
+              this.onSiteCounts.set(e._id, measured.filter(r => r.withinPerimeter === true).length);
+              this.refreshCountColumns();
+            },
+            error: () => {
+              this.attendeeCounts.set(e._id, 0);
+              this.perimeterMeasuredCounts.set(e._id, 0);
+              this.onSiteCounts.set(e._id, 0);
+              this.refreshCountColumns();
+            },
+          });
+        });
       },
       error: err => {
         this.loading = false;
@@ -469,19 +651,65 @@ export class EventListComponent implements OnInit, OnDestroy {
     delete (window as any).__iserveExportAttendees;
   }
 
+  openEditAttendanceDialog(record: IAttendance, event: IEvent) {
+    const ref = this.dialog.open<
+      EditAttendanceDialogComponent,
+      EditAttendanceDialogData,
+      EditAttendanceDialogResult
+    >(EditAttendanceDialogComponent, {
+      width: 'min(560px, 94vw)',
+      maxHeight: '90vh',
+      autoFocus: 'first-tabbable',
+      data: { record, event, teacherEmail: this.ctx.email },
+    });
+
+    ref.afterClosed().subscribe(result => {
+      if (!result) return;
+      this.attendanceService.update(record._id, result.payload).subscribe({
+        next: () => {
+          this.snack.open('Attendance updated.', 'Close', { duration: 2500 });
+          // Refresh the detail panel by reloading attendance counts
+          this.attendanceService.getByEvent(event._id).subscribe({
+            next: records => {
+              this.attendeeCounts.set(event._id, records.length);
+              this.refreshCountColumns();
+              // Refresh all open detail grids so the edited row updates
+              this.detailApis.forEach(api => {
+                try { (api as any).refreshInfiniteCache?.(); } catch {}
+              });
+            },
+          });
+        },
+        error: err => {
+          this.snack.open(err?.error?.message ?? err?.message ?? 'Update failed.', 'Close', { duration: 4000 });
+        },
+      });
+    });
+  }
+
   // ── Filter logic ──────────────────────────────────────────────────────────
   applyFilters() {
-    const mode   = this.filterModeCtrl.value   ?? '';
-    const hours  = this.filterHoursCtrl.value  ?? '';
-    const points = this.filterPointsCtrl.value ?? '';
-    const from   = this.filterFromCtrl.value   ?? '';
-    const to     = this.filterToCtrl.value     ?? '';
+    const mode      = this.filterModeCtrl.value   ?? '';
+    const tracking  = this.filterTrackingCtrl.value ?? 'all';
+    const dept      = this.filterDeptCtrl.value   ?? '';
+    const category  = this.filterCategoryCtrl.value ?? '';
+    const from      = this.filterFromCtrl.value   ?? '';
+    const to        = this.filterToCtrl.value     ?? '';
 
     this.filteredEvents = this.events.filter(e => {
-      if (mode   && e.qrMode   !== mode)  return false;
-      if (hours  && e.hourMode !== hours) return false;
-      if (points === 'yes' && !e.pointsEnabled)  return false;
-      if (points === 'no'  &&  e.pointsEnabled)  return false;
+      // QR Mode filter
+      if (mode && e.qrMode !== mode) return false;
+
+      // Tracking type filter
+      if (tracking === 'hours' && e.hourMode === 'disabled') return false;
+      if (tracking === 'points' && e.pointsMode === 'disabled') return false;
+      if (tracking === 'attendance' && (e.hourMode !== 'disabled' || e.pointsMode !== 'disabled')) return false;
+
+      // Department and category
+      if (dept && e.department !== dept) return false;
+      if (category && e.category !== category) return false;
+
+      // Date range
       if (from && e.createdAt && new Date(e.createdAt) < new Date(from)) return false;
       if (to && e.createdAt) {
         const toEnd = new Date(to); toEnd.setHours(23, 59, 59, 999);
@@ -493,26 +721,93 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   clearFilters() {
     this.filterModeCtrl.setValue('');
-    this.filterHoursCtrl.setValue('');
-    this.filterPointsCtrl.setValue('');
+    this.filterTrackingCtrl.setValue('all');
+    this.filterDeptCtrl.setValue('');
+    this.filterCategoryCtrl.setValue('');
     this.filterFromCtrl.setValue('');
     this.filterToCtrl.setValue('');
   }
 
-  // ── Export: master events grid (AG Grid Enterprise Excel) ─────────────────
-  exportMasterGrid() {
-    this.gridApi?.exportDataAsExcel({
-      fileName: 'Events.xlsx',
-      sheetName: 'Events',
-      columnKeys: ['eventName', 'qrMode', 'hourMode', 'pointsEnabled', 'createdAt'],
+  // Helper to get attendee count for an event
+  getAttendeeCount(eventId: string): number {
+    return this.attendeeCounts.get(eventId) ?? 0;
+  }
+
+  /** Force AG Grid to re-evaluate the value-getter columns whose data lives
+   * in async maps (attendees + on-site breakdown). */
+  private refreshCountColumns() {
+    if (!this.gridApi) return;
+    this.gridApi.refreshCells({
+      columns: ['attendeeCount', 'onSite'],
+      force: true,
     });
+  }
+
+  // ── Export: master events grid ────────────────────────────────────────────
+  /**
+   * Uses SheetJS rather than AG Grid Enterprise's `exportDataAsExcel` so
+   * the result is consistent across browsers and includes the full row set
+   * regardless of which columns the responsive layout is currently hiding.
+   */
+  exportMasterGrid() {
+    try {
+      if (!this.filteredEvents?.length) {
+        this.snack.open('Nothing to export.', 'Close', { duration: 2500 });
+        return;
+      }
+      const rows = this.filteredEvents.map(e => ({
+        'Event':       e.eventName ?? '',
+        'Mode':        e.qrMode === 'in-out' ? 'In / Out' : 'Once-Off',
+        'Hours':       ({ 'in-out': 'In/Out', fixed: 'Fixed', volume: 'Volume', disabled: 'None' } as any)[e.hourMode as any] ?? e.hourMode ?? '',
+        'Points':      e.pointsEnabled ? `${e.pointsValue ?? 0} pts` : '',
+        'Department':  e.department ?? '',
+        'Attendees':   this.getAttendeeCount(e._id),
+        'On-site':     this.formatOnSiteForExport(e),
+        'Created':     e.createdAt ? new Date(e.createdAt).toLocaleDateString() : '',
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const widths = Object.keys(rows[0]).map(k => ({
+        wch: Math.max(k.length, ...rows.map(r => String((r as any)[k] ?? '').length)) + 2,
+      }));
+      (ws as any)['!cols'] = widths;
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Events');
+      XLSX.writeFile(wb, `Events_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      this.snack.open(`Exported ${rows.length} ${rows.length === 1 ? 'event' : 'events'}.`, 'Close', { duration: 2500 });
+    } catch (err) {
+      console.error('Export failed', err);
+      this.snack.open('Export failed. Please try again.', 'Close', { duration: 3500 });
+    }
+  }
+
+  /** Renders the on-site stat the same way the grid cell does. */
+  private formatOnSiteForExport(e: IEvent): string {
+    if (!e.captureOptions?.hasGeolocate || !(e as any).geoTarget) return '';
+    const measured = this.perimeterMeasuredCounts.get(e._id) ?? 0;
+    if (measured === 0) return 'No scans';
+    return `${this.onSiteCounts.get(e._id) ?? 0} / ${measured}`;
   }
 
   // ── Export: individual event attendees (SheetJS → .xlsx) ──────────────────
   exportEventAttendees(eventId: string, eventName: string) {
     this.attendanceService.getByEvent(eventId).subscribe({
-      next: records => this.writeAttendeesXlsx(records, eventName),
-      error: ()     => console.error('Failed to fetch attendees for export'),
+      next: records => {
+        if (!records?.length) {
+          this.snack.open('No attendees yet for this event.', 'Close', { duration: 2500 });
+          return;
+        }
+        try {
+          this.writeAttendeesXlsx(records, eventName);
+          this.snack.open(`Exported ${records.length} ${records.length === 1 ? 'attendee' : 'attendees'}.`, 'Close', { duration: 2500 });
+        } catch (err) {
+          console.error('Excel export failed', err);
+          this.snack.open('Export failed. Please try again.', 'Close', { duration: 3500 });
+        }
+      },
+      error: err => {
+        console.error('Failed to fetch attendees for export', err);
+        this.snack.open(err?.error?.message ?? 'Could not load attendees for export.', 'Close', { duration: 3500 });
+      },
     });
   }
 
@@ -524,15 +819,18 @@ export class EventListComponent implements OnInit, OnDestroy {
     };
 
     const rows = records.map(r => ({
-      'Student':  [r.studentFirstName, r.studentLastName].filter(Boolean).join(' ') || r.studentEmail || '',
-      'Email':    r.studentEmail    ?? '',
-      'Grade':    r.studentGrade    ?? '',
-      'Class':    r.studentClass    ?? '',
-      'Time In':  r.timeIn  ? new Date(r.timeIn).toLocaleString()  : '',
-      'Time Out': r.timeOut ? new Date(r.timeOut).toLocaleString() : '',
-      'Hours':    fmtHours(r.hours),
-      'Points':   r.pointsAwarded ?? 0,
-      'Source':   r.source ?? '',
+      'First Name': r.studentFirstName ?? '',
+      'Last Name':  r.studentLastName  ?? '',
+      'Email':      r.studentEmail     ?? '',
+      'Grade':      r.studentGrade     ?? '',
+      'Class':      r.studentClass     ?? '',
+      'House':      r.studentHouse     ?? '',
+      'Tutor':      r.studentTutor     ?? '',
+      'Time In':    r.timeIn  ? new Date(r.timeIn).toLocaleString()  : '',
+      'Time Out':   r.timeOut ? new Date(r.timeOut).toLocaleString() : '',
+      'Hours':      fmtHours(r.hours),
+      'Points':     r.pointsAwarded ?? 0,
+      'Source':     r.source ?? '',
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -556,25 +854,77 @@ export class EventListComponent implements OnInit, OnDestroy {
     });
   }
 
-  // xs <480: name + actions | sm 480+: +mode | md 768+: +hours+points | lg 1024+: +created
+  // xs  < 480: Event Name + Actions
+  // sm 480-639: + Mode badge
+  // md 640-767: + Hours, Points
+  // lg 768-1023: + Attendees, On-site
+  // xl 1024-1279: + Department
+  // 2xl >=1280: + Created date
   private applyMasterResponsive() {
     if (!this.gridApi) return;
     const w = window.innerWidth;
-    this.gridApi.setColumnsVisible(['qrMode'],                    w >= 480);
-    this.gridApi.setColumnsVisible(['hourMode', 'pointsEnabled'], w >= 768);
-    this.gridApi.setColumnsVisible(['createdAt'],                 w >= 1024);
+    this.gridApi.setColumnsVisible(['qrMode'],                                  w >= 480);
+    this.gridApi.setColumnsVisible(['hourMode', 'pointsEnabled'],               w >= 640);
+    this.gridApi.setColumnsVisible(['attendeeCount', 'onSite'],                 w >= 768);
+    this.gridApi.setColumnsVisible(['department'],                              w >= 1024);
+    this.gridApi.setColumnsVisible(['createdAt'],                               w >= 1280);
+    this.gridApi.refreshHeader?.();
   }
 
   // xs <480: student+hours | sm 480+: +source | md 768+: +email+grade | lg 1024+: +times+points
   private applyDetailResponsive(api: any) {
     if (!api) return;
     const w = window.innerWidth;
-    api.setColumnsVisible(['source'],                               w >= 480);
-    api.setColumnsVisible(['studentEmail', 'gradeClass'],           w >= 768);
-    api.setColumnsVisible(['timeIn', 'timeOut', 'pointsAwarded'],   w >= 1024);
+    api.setColumnsVisible(['source'],                                      w >= 480);
+    api.setColumnsVisible(['gradeClass'],                                  w >= 768);
+    api.setColumnsVisible(['timeIn', 'timeOut', 'pointsAwarded'],          w >= 1024);
+    api.setColumnsVisible(['studentHouse', 'studentTutor'],                w >= 1280);
   }
 
   onSearch() {
-    this.gridApi?.setGridOption('quickFilterText', this.searchCtrl.value ?? '');
+    const query = (this.searchCtrl.value ?? '').toLowerCase().trim();
+
+    // Update grid filter
+    this.gridApi?.setGridOption('quickFilterText', query);
+
+    // Generate suggestions from loaded events
+    if (query.length > 0) {
+      this.searchSuggestions = this.events
+        .filter(e =>
+          e.eventName.toLowerCase().includes(query) ||
+          (e.department && e.department.toLowerCase().includes(query)) ||
+          (e.category && e.category.toLowerCase().includes(query))
+        )
+        .slice(0, 5)
+        .map(e => ({
+          type: 'event',
+          id: e._id,
+          label: e.eventName,
+          meta: e.department || '—',
+        }));
+      this.showSearchSuggestions = true;
+    } else {
+      this.showSearchSuggestions = false;
+      this.searchSuggestions = [];
+    }
+  }
+
+  selectSearchSuggestion(suggestion: any) {
+    if (suggestion.type === 'event') {
+      this.searchCtrl.setValue(suggestion.label);
+      this.showSearchSuggestions = false;
+      this.router.navigate(['/teacher/events', suggestion.id], { queryParams: this.qp });
+    }
+  }
+
+  onSearchFocus() {
+    if (this.searchCtrl.value && this.searchCtrl.value.length > 0) {
+      this.showSearchSuggestions = true;
+    }
+  }
+
+  onSearchBlur() {
+    // Delay to allow click on suggestion to register
+    setTimeout(() => this.showSearchSuggestions = false, 200);
   }
 }

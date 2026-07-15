@@ -1,5 +1,29 @@
 /* Angular Material prebuilt theme loaded via angular.json styles[] */
 
+/* ── iOS Safari auto-zoom prevention ─────────────────────────────────────── *
+ * Mobile Safari (and a few other touch browsers) automatically zoom the
+ * page when an <input> / <textarea> / <select> with a computed font-size
+ * below 16px gets focus. To prevent the zoom we force 16px on touch
+ * (`pointer: coarse`) devices for ANY form control — including Angular
+ * Material's outline-style fields, which use a CSS custom property for
+ * their text size.
+ */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  /* Material text fields override their input via these custom props */
+  :root {
+    --mdc-outlined-text-field-input-text-size: 16px !important;
+    --mdc-filled-text-field-input-text-size:   16px !important;
+  }
+  .mat-mdc-form-field .mat-mdc-input-element,
+  .mat-mdc-form-field textarea.mat-mdc-input-element {
+    font-size: 16px !important;
+  }
+}
+
+
 /*
  * ══ THEMING PHILOSOPHY ══════════════════════════════════════════════════════
  *
@@ -129,63 +153,462 @@ button.mat-mdc-icon-button {
 }
 /* Slide-toggle already handled above via --mdc-switch-selected-track-color */
 
-/* ── Compact form fields used in filter bars ─────────────────────────────────
- *  Add class="compact-field" to mat-form-field
- * ──────────────────────────────────────────────────────────────────────────── */
-.compact-field .mat-mdc-form-field-infix {
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
-  min-height: 32px !important;
-}
-.compact-field .mat-mdc-text-field-wrapper     { padding: 0 10px !important; }
-.compact-field .mdc-floating-label             { font-size: 11px !important; }
-.compact-field .mat-mdc-select-value           { font-size: 11px !important; }
-.compact-field input.mat-mdc-input-element     { font-size: 11px !important; }
-/* Hide the subscript (hint/error) reserved space in compact filter fields */
-.compact-field .mat-mdc-form-field-subscript-wrapper { display: none !important; }
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  FORM FIELD PRIMITIVES — label-above pattern
+ *
+ *  Principles:
+ *    • All fields share one height (40px) — text, number, and select look identical
+ *    • Label sits above the field (no floating) — no height tricks needed
+ *    • Native <select> uses the system picker on mobile — better UX than a
+ *      custom overlay; styled with a custom chevron via background-image
+ *    • Error/hint sit below — Angular's ng-invalid + ng-touched drive border colour
+ *    • Focus ring: border-color + subtle box-shadow in the school primary colour
+ *    • Conversion sub-cards use a slightly inset gray-50 surface
+ * ════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Toolbar native date field ───────────────────────────────────────────────
- *  Used in filter bars where mat-form-field blocks native date picker clicks
- * ──────────────────────────────────────────────────────────────────────────── */
-.toolbar-date-field {
+/* Card wrapper */
+.form-card {
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  padding: 3px 8px 4px;
-  background: #fff;
-  width: 140px;
+  gap: 12px;
+  /* Smooth height change when expansion fields appear/disappear */
+  transition: padding 0.2s ease;
+}
+
+/* ── Sticky submit bar ───────────────────────────────────────────────────────
+ *  Stays pinned to the bottom of the viewport regardless of how much expansion
+ *  content is showing above. The gradient blends the button into the page bg.
+ * ──────────────────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════════
+ *  CAPTURE OPTION TILES
+ *
+ *  3 equal-width tap-to-toggle cards in a row. Same visual language as the
+ *  hour/points mode tiles — border highlight + tinted background when active.
+ *  A ::after checkmark appears top-right when active so the state is unambiguous.
+ * ════════════════════════════════════════════════════════════════════════════ */
+.capture-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.capture-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 10px 10px 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
   cursor: pointer;
-  transition: border-color 0.15s;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  /* Smooth colour transition + satisfying press scale */
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+              transform 0.1s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
   user-select: none;
+  outline: none;
 }
-.toolbar-date-field:focus-within {
-  border-color: var(--color-primary);
+
+.capture-tile:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
 }
-.toolbar-date-label {
-  font-size: 10px;
-  color: #6b7280;
+
+/* Press/tap feedback — scale down slightly like a physical button */
+.capture-tile:active {
+  transform: scale(0.95);
+  box-shadow: none;
+}
+
+/* Active (enabled) state */
+.capture-tile--active {
+  border-color: var(--color-primary) !important;
+  background-color: color-mix(in srgb, var(--color-primary) 8%, white) !important;
+}
+.capture-tile--active .capture-icon {
+  color: var(--color-primary);
+}
+
+/* Checkmark indicator top-right when active */
+.capture-tile--active::after {
+  content: '✓';
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
   line-height: 1;
-  margin-bottom: 2px;
+}
+
+.capture-icon {
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: #6b7280;
+}
+
+.capture-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+.capture-desc {
+  font-size: 10px;
+  color: #9ca3af;
+  line-height: 1.3;
+}
+
+/* ── Press animation on hour/points mode tiles ───────────────────────────────
+ *  Give the mat-button-toggle tiles the same physical press feel.
+ * ──────────────────────────────────────────────────────────────────────────── */
+.hour-mode-group .mat-button-toggle,
+.points-mode-group .mat-button-toggle {
+  transition: transform 0.1s ease !important;
+}
+.hour-mode-group .mat-button-toggle:active,
+.points-mode-group .mat-button-toggle:active {
+  transform: scale(0.95) !important;
+}
+
+/* ── Press animation on the seg-control tab buttons ─────────────────────────*/
+.seg-btn {
+  transition: transform 0.1s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.seg-btn:active {
+  transform: scale(0.94);
+}
+
+.submit-sticky {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 8px;
+  /* Fade out the page background behind the button so scrolling content
+     disappears smoothly rather than being suddenly cut off */
+  background: linear-gradient(to bottom,
+    rgba(243, 244, 246, 0)   0%,
+    rgba(243, 244, 246, 0.9) 22%,
+    #f3f4f6                  40%);
+  /* Allow taps on the transparent gradient area to pass through to form */
   pointer-events: none;
 }
-.toolbar-date-input {
-  font-size: 11px;
-  color: #111827;
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 0;
-  width: 100%;
-  cursor: pointer;
-  font-family: inherit;
+.submit-sticky > button {
+  pointer-events: auto;
 }
+
+/* Nested conversion sub-card */
+.conversion-card {
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Section / sub-section heading */
+.card-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+/* Field container — stacks label → input → hint/error */
+.field-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Label above the input */
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+/* Shared base for text / number inputs and selects */
+.field-input,
+.field-select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #111827;
+  background: #ffffff;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+/* Focus state */
+.field-input:focus,
+.field-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  background-color: #fafbff;
+}
+
+/* Invalid + touched state — Angular adds ng-invalid ng-touched automatically */
+.field-input.ng-invalid.ng-touched,
+.field-select.ng-invalid.ng-touched {
+  border-color: #ef4444;
+}
+.field-input.ng-invalid.ng-touched:focus,
+.field-select.ng-invalid.ng-touched:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+/* Native select: custom chevron, remove system arrow */
+.field-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+/* Date input styling — modern look with proper spacing */
+input[type="date"].field-input {
+  padding-right: 32px;
+  color: #111827;
+}
+input[type="date"].field-input::placeholder {
+  color: #d1d5db;
+}
+/* Hide the calendar icon that browsers add to date inputs */
+input[type="date"].field-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+/* ── Compact filter bar fields (single-line toolbar) ──────────────────────── */
+.field-wrap-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.field-label-compact {
+  font-size: 9px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.field-input-compact {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #111827;
+  background: #ffffff;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field-input-compact:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+.field-input-compact.ng-invalid.ng-touched {
+  border-color: #ef4444;
+}
+/* Compact select chevron */
+select.field-input-compact {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 24px;
+  cursor: pointer;
+}
+input[type="date"].field-input-compact {
+  padding-right: 24px;
+  cursor: pointer;
+}
+
+/* ── Event-list action buttons (rendered inside AG Grid cellRenderer) ───── */
+/* Must live in the global stylesheet because cellRenderer output is not
+   subject to component-scoped style encapsulation. */
+.event-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 44px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color-primary, #2c698d);
+  border: 0;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.05s;
+  white-space: nowrap;
+}
+.event-action-btn:hover { opacity: 0.88; }
+.event-action-btn:active { transform: scale(0.96); }
+/* Bigger tap targets on touch / coarse pointers */
+@media (max-width: 767px), (pointer: coarse) {
+  .event-action-btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
+
+/* ── Compact Material datepicker (matches .field-input-compact size) ────── */
+.filter-date.mat-mdc-form-field {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  font-family: inherit;
+  letter-spacing: 0;
+  --mdc-outlined-text-field-container-shape: 8px;
+  --mdc-outlined-text-field-outline-color: #e5e7eb;
+  --mdc-outlined-text-field-hover-outline-color: #cbd5e1;
+  --mdc-outlined-text-field-focus-outline-color: var(--color-primary);
+  --mdc-outlined-text-field-input-text-color: #111827;
+  --mdc-outlined-text-field-input-text-placeholder-color: #9ca3af;
+  --mat-form-field-container-height: 32px;
+  --mat-form-field-container-vertical-padding: 6px;
+}
+.filter-date .mat-mdc-text-field-wrapper { padding: 0 10px; background: #ffffff; }
+.filter-date .mat-mdc-form-field-infix {
+  min-height: 32px;
+  padding: 6px 0 !important;
+  width: auto;
+}
+.filter-date .mat-mdc-form-field-flex { align-items: center; }
+.filter-date input.mat-mdc-input-element {
+  font-size: 12px;
+  color: #111827;
+  cursor: pointer;
+  caret-color: transparent;
+}
+.filter-date input.mat-mdc-input-element::placeholder { color: #9ca3af; }
+/* Calendar toggle button: smaller, brand-tinted */
+.filter-date .mat-mdc-icon-button.mat-mdc-button-base {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  margin-right: -6px;
+  color: #6b7280;
+}
+.filter-date .mat-mdc-icon-button .mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.filter-date:hover .mat-mdc-icon-button.mat-mdc-button-base { color: var(--color-primary); }
+/* Hide the floating label entirely (we use the compact label above) */
+.filter-date .mat-mdc-floating-label { display: none !important; }
+.filter-date .mdc-notched-outline__notch { border-left: none !important; padding: 0 !important; }
+/* Shrink outline so it sits like a single 1px border, no notch gap */
+.filter-date .mdc-notched-outline > div { border-width: 1px !important; }
+
+/* Datepicker calendar popup polish */
+.mat-datepicker-content {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.15), 0 4px 12px -4px rgb(0 0 0 / 0.08) !important;
+}
+.mat-datepicker-content .mat-calendar {
+  --mat-datepicker-calendar-date-selected-state-background-color: var(--color-primary);
+  --mat-datepicker-calendar-date-today-outline-color: var(--color-primary);
+  --mat-datepicker-toggle-active-state-icon-color: var(--color-primary);
+  --mat-datepicker-calendar-date-focus-state-background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  --mat-datepicker-calendar-date-hover-state-background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+/* Search suggestions styling */
+.search-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.search-suggestion:last-child {
+  border-bottom: none;
+}
+.search-suggestion:hover {
+  background-color: #f9fafb;
+}
+.search-suggestion-label {
+  font-weight: 500;
+  color: #111827;
+  font-size: 13px;
+}
+.search-suggestion-meta {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Helper text below the input */
+.field-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+/* Validation error below the input */
+.field-error {
+  font-size: 11px;
+  color: #ef4444;
+  line-height: 1.4;
+}
+
+/* ── Hide native number-input spinners (up/down arrows) ─────────────────────
+ *  They look inconsistent across browsers and conflict with the Material style.
+ * ──────────────────────────────────────────────────────────────────────────── */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
 
 /* ── Hour-mode button-toggle group (2×2 card layout) ────────────────────────*/
 .hour-mode-group {
   display: grid !important;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   border-radius: 12px !important;
   box-shadow: none !important;
@@ -193,7 +616,7 @@ button.mat-mdc-icon-button {
 }
 .hour-mode-group .mat-button-toggle {
   border: 2px solid #e5e7eb !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   overflow: hidden;
 }
 .hour-mode-group .mat-button-toggle-checked {
@@ -201,7 +624,7 @@ button.mat-mdc-icon-button {
   background-color: color-mix(in srgb, var(--color-primary) 8%, white) !important;
 }
 .hour-mode-group .mat-button-toggle-label-content {
-  padding: 8px 10px !important;
+  padding: 5px 8px !important;
   line-height: normal !important;
   height: auto !important;
   display: flex !important;
@@ -214,6 +637,119 @@ button.mat-mdc-icon-button {
 }
 .hour-mode-group .mat-button-toggle-button { width: 100% !important; }
 .hour-mode-group .mat-button-toggle { overflow: visible !important; }
+
+
+/* ── Tracking card: fixed-height base keeps all 3 tabs identical ─────────────
+ *  Only the tile/toggle selector is constrained. Conditional expansion fields
+ *  (Fixed value, Volume conversion) sit below this zone and grow freely.
+ *
+ *  Height sizing guide:
+ *    Each tile = 2 lines of text-xs + padding ≈ 56px min.
+ *    2 rows × 56px + 6px gap = 118px → use 130px to give tiles room to breathe.
+ *    Capture tab (3 flex-1 rows inside h-full) fills the same 130px automatically.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.tracking-base {
+  height: 130px;
+  position: relative;   /* stacking context for absolutely-placed tab panels */
+}
+/* Each tab panel fills the fixed zone; inactive ones fade out invisibly */
+.tracking-tab {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.tracking-tab--active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Attendance-Only (none) tab content ──────────────────── */
+.none-tab-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 2px dashed #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+  padding: 12px;
+}
+.none-tab-icon {
+  font-size: 28px;
+  line-height: 1;
+  color: #9ca3af;
+}
+.none-tab-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin: 0;
+}
+.none-tab-desc {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Tile grids fill the tab panel */
+.tracking-base .hour-mode-group,
+.tracking-base .points-mode-group {
+  height: 100%;
+  grid-template-rows: 1fr 1fr;   /* force equal row heights within fixed container */
+  overflow: visible !important;  /* prevent Angular Material's overflow:hidden clipping rows */
+}
+/* Height must cascade through MDC's internal elements */
+.tracking-base .hour-mode-group .mat-button-toggle,
+.tracking-base .hour-mode-group .mat-button-toggle-button,
+.tracking-base .points-mode-group .mat-button-toggle,
+.tracking-base .points-mode-group .mat-button-toggle-button {
+  height: 100%;
+}
+/* Centre tile content vertically in the fixed-height cell */
+.tracking-base .hour-mode-group .mat-button-toggle-label-content,
+.tracking-base .points-mode-group .mat-button-toggle-label-content {
+  justify-content: center;
+}
+
+/* ── Points-mode 2×2 tile grid (mirrors hour-mode-group exactly) ─────────────*/
+.points-mode-group {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: 100%;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.points-mode-group .mat-button-toggle {
+  border: 2px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+.points-mode-group .mat-button-toggle-checked {
+  border-color: var(--color-primary) !important;
+  background-color: color-mix(in srgb, var(--color-primary) 8%, white) !important;
+}
+.points-mode-group .mat-button-toggle-label-content {
+  padding: 5px 8px !important;
+  line-height: normal !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+}
+.points-mode-group .mat-button-toggle-button { width: 100% !important; position: relative !important; }
+.points-mode-group .mat-button-toggle { overflow: visible !important; }
 
 /* ── Utility classes ── */
 .btn-primary {
