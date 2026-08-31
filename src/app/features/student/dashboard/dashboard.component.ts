@@ -1,11 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { HoursFormatPipe } from '../../../shared/pipes/hours-format.pipe';
-import { AttendanceService, IAttendance } from '../../../core/services/attendance.service';
+import {
+  AttendanceService,
+  IAttendance,
+  AttendanceSummary,
+  DepartmentBreakdown,
+} from '../../../core/services/attendance.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { ThemeService } from '../../../core/theme/theme.service';
 
@@ -101,6 +108,34 @@ type Tab = 'Hours' | 'Points' | 'Attendance';
               </div>
             </div>
 
+            <!-- Hours by department / subcategory -->
+            <div *ngIf="hoursDepartments.length > 0" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Hours by Department</h3>
+
+              <div *ngFor="let dept of hoursDepartments" class="mb-4 last:mb-0">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-gray-900">{{ dept.name }}</p>
+                  <p class="text-sm font-bold" style="color:var(--color-primary)">{{ dept.hours | hoursFormat }}</p>
+                </div>
+
+                <div class="mt-1.5 pl-3 border-l-2 border-gray-100 space-y-2">
+                  <div *ngFor="let sub of subcategoriesWithHours(dept)">
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs font-medium text-gray-600">{{ sub.name }}</p>
+                      <p class="text-xs text-gray-500">
+                        {{ sub.hours | hoursFormat }}<span *ngIf="sub.hoursLimit"> / {{ sub.hoursLimit | hoursFormat }} hrs</span>
+                      </p>
+                    </div>
+                    <div *ngIf="sub.hoursLimit" class="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div class="h-full rounded-full"
+                           [style.width.%]="limitPercent(sub.hours, sub.hoursLimit)"
+                           [style.background-color]="limitPercent(sub.hours, sub.hoursLimit) >= 100 ? '#ef4444' : 'var(--color-primary)'"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
               <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Hours Events</h3>
 
@@ -140,6 +175,34 @@ type Tab = 'Hours' | 'Points' | 'Attendance';
               </div>
               <div class="text-right">
                 <p class="text-xs text-gray-400">{{ pointsRecords.length }} {{ pointsRecords.length === 1 ? 'event' : 'events' }}</p>
+              </div>
+            </div>
+
+            <!-- Points by department / subcategory -->
+            <div *ngIf="pointsDepartments.length > 0" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Points by Department</h3>
+
+              <div *ngFor="let dept of pointsDepartments" class="mb-4 last:mb-0">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-gray-900">{{ dept.name }}</p>
+                  <p class="text-sm font-bold" style="color:var(--color-secondary)">+{{ dept.points }}</p>
+                </div>
+
+                <div class="mt-1.5 pl-3 border-l-2 border-gray-100 space-y-2">
+                  <div *ngFor="let sub of subcategoriesWithPoints(dept)">
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs font-medium text-gray-600">{{ sub.name }}</p>
+                      <p class="text-xs text-gray-500">
+                        {{ sub.points }}<span *ngIf="sub.pointsLimit"> / {{ sub.pointsLimit }} pts</span>
+                      </p>
+                    </div>
+                    <div *ngIf="sub.pointsLimit" class="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div class="h-full rounded-full"
+                           [style.width.%]="limitPercent(sub.points, sub.pointsLimit)"
+                           [style.background-color]="limitPercent(sub.points, sub.pointsLimit) >= 100 ? '#ef4444' : 'var(--color-secondary)'"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -215,6 +278,7 @@ export class DashboardComponent implements OnInit {
   loading = true;
   apiError = '';
   attendance: IAttendance[] = [];
+  summary: AttendanceSummary | null = null;
 
   /** The email the dashboard is currently rendered for. Captured at init
    *  from the URL — sessionStorage is only used as a final fallback. */
@@ -246,10 +310,16 @@ export class DashboardComponent implements OnInit {
 
     this.theme.loadAndApply(schoolId);
 
-    this.attendanceService.getByStudent(this.studentEmail).subscribe({
-      next: records => {
-        this.attendance = records.sort((a, b) =>
+    forkJoin({
+      attendance: this.attendanceService.getByStudent(this.studentEmail),
+      summary: this.attendanceService.getSummary(this.studentEmail, schoolId).pipe(
+        catchError(() => of(null)),
+      ),
+    }).subscribe({
+      next: ({ attendance, summary }) => {
+        this.attendance = attendance.sort((a, b) =>
           (b.timeIn?.toString() ?? '').localeCompare(a.timeIn?.toString() ?? ''));
+        this.summary = summary;
         this.loading = false;
       },
       error: err => {
@@ -298,6 +368,15 @@ export class DashboardComponent implements OnInit {
     return this.hoursRecords.reduce((s, r) => s + (r.hours ?? 0), 0);
   }
 
+  /** Departments with any logged hours, for the "Hours by Department" breakdown. */
+  get hoursDepartments(): DepartmentBreakdown[] {
+    return (this.summary?.departmentBreakdown ?? []).filter(d => d.hours > 0);
+  }
+
+  subcategoriesWithHours(dept: DepartmentBreakdown) {
+    return dept.subcategories.filter(s => s.hours > 0);
+  }
+
   // ── Points ──────────────────────────────────────────────────────────────
   /** Records for events where points are enabled. */
   get pointsRecords(): IAttendance[] {
@@ -306,6 +385,21 @@ export class DashboardComponent implements OnInit {
 
   get totalPoints(): number {
     return this.pointsRecords.reduce((s, r) => s + (r.pointsAwarded ?? 0), 0);
+  }
+
+  /** Departments with any earned points, for the "Points by Department" breakdown. */
+  get pointsDepartments(): DepartmentBreakdown[] {
+    return (this.summary?.departmentBreakdown ?? []).filter(d => d.points > 0);
+  }
+
+  subcategoriesWithPoints(dept: DepartmentBreakdown) {
+    return dept.subcategories.filter(s => s.points > 0);
+  }
+
+  /** Percentage (capped at 100) of a limit that's been used, for progress bars. */
+  limitPercent(used: number, limit?: number): number {
+    if (!limit) return 0;
+    return Math.min(100, Math.round((used / limit) * 100));
   }
 
   // ── Attendance only ─────────────────────────────────────────────────────

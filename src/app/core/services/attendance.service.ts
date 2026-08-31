@@ -40,6 +40,21 @@ export interface IAttendance {
   eventPointsEnabled?: boolean;
 }
 
+export interface SubcategoryBreakdown {
+  name: string;
+  hours: number;
+  points: number;
+  hoursLimit?: number;
+  pointsLimit?: number;
+}
+
+export interface DepartmentBreakdown {
+  name: string;
+  hours: number;
+  points: number;
+  subcategories: SubcategoryBreakdown[];
+}
+
 export interface AttendanceSummary {
   studentEmail: string;
   totalHours: number;
@@ -55,6 +70,10 @@ export interface AttendanceSummary {
   pointsByDepartment?: Record<string, number>;
   pointsByCategory?: Record<string, number>;
   eventsByDepartment?: Record<string, number>;
+
+  // Nested department -> subcategory breakdown, with per-subcategory limits
+  // attached where the school has configured one.
+  departmentBreakdown?: DepartmentBreakdown[];
 
   // Targets
   gradeTargetHours: Record<string, number>;
