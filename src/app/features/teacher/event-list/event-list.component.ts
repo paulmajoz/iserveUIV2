@@ -23,6 +23,7 @@ import {
   EditAttendanceDialogData,
   EditAttendanceDialogResult,
 } from '../event-detail/edit-attendance-dialog.component';
+import { StudentDashboardDialogComponent } from '../../../shared/components/student-dashboard-dialog/student-dashboard-dialog.component';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { environment } from '../../../../environments/environment';
 
@@ -47,6 +48,7 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
     AgGridAngular,
     HeaderComponent,
     EditAttendanceDialogComponent,
+    StudentDashboardDialogComponent,
   ],
   template: `
     <app-header></app-header>
@@ -107,6 +109,13 @@ if (environment.agGridLicense) LicenseManager.setLicenseKey(environment.agGridLi
 
         <!-- "New Event" button removed — kept the empty-state CTA further down
              so the very first event can still be created from this page. -->
+
+        <!-- View a specific student's dashboard -->
+        <button mat-stroked-button class="hidden md:flex shrink-0"
+                (click)="openStudentDashboardDialog()">
+          <mat-icon>person_search</mat-icon>
+          Student Dashboard
+        </button>
 
       </div>
 
@@ -649,6 +658,14 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     delete (window as any).__iserveExportAttendees;
+  }
+
+  openStudentDashboardDialog() {
+    this.dialog.open(StudentDashboardDialogComponent, {
+      width: 'min(440px, 94vw)',
+      maxHeight: '90vh',
+      autoFocus: 'first-tabbable',
+    });
   }
 
   openEditAttendanceDialog(record: IAttendance, event: IEvent) {

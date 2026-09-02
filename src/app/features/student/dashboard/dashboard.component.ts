@@ -3,8 +3,11 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { HoursFormatPipe } from '../../../shared/pipes/hours-format.pipe';
 import {
@@ -24,7 +27,9 @@ type Tab = 'Hours' | 'Points' | 'Attendance';
   imports: [
     CommonModule,
     MatIconModule,
+    MatButtonModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     HeaderComponent,
     HoursFormatPipe,
   ],
@@ -72,6 +77,9 @@ type Tab = 'Hours' | 'Points' | 'Attendance';
               <h1 class="text-lg font-bold text-gray-900">{{ displayName }}</h1>
               <p class="text-xs text-gray-500">{{ studentGradeClass }}</p>
             </div>
+            <button mat-icon-button (click)="exportToExcel()" aria-label="Export to Excel">
+              <mat-icon>download</mat-icon>
+            </button>
           </div>
         </div>
 
@@ -292,6 +300,7 @@ export class DashboardComponent implements OnInit {
     public ctx: UrlContextService,
     private route: ActivatedRoute,
     private theme: ThemeService,
+    private snack: MatSnackBar,
   ) {}
 
   ngOnInit() {
@@ -408,6 +417,57 @@ export class DashboardComponent implements OnInit {
     return this.attendance.filter(
       r => (!r.eventHourMode || r.eventHourMode === 'disabled') && !r.eventPointsEnabled
     );
+  }
+
+  // ── Export ───────────────────────────────────────────────────────────────
+  exportToExcel() {
+    if (!this.summary && this.attendance.length === 0) {
+      this.snack.open('Nothing to export yet.', 'Close', { duration: 2500 });
+      return;
+    }
+    try {
+      const breakdownRows = (this.summary?.departmentBreakdown ?? []).flatMap(dept =>
+        dept.subcategories.map(sub => ({
+          'Department': dept.name,
+          'Subcategory': sub.name,
+          'Hours': sub.hours,
+          'Hours Limit': sub.hoursLimit ?? '',
+          'Points': sub.points,
+          'Points Limit': sub.pointsLimit ?? '',
+        })),
+      );
+
+      const recordRows = this.attendance.map(r => ({
+        'Event Name': r.eventName ?? '',
+        'Department': r.eventDepartment ?? '',
+        'Category': r.eventCategory ?? '',
+        'Time In': r.timeIn ? new Date(r.timeIn).toLocaleString() : '',
+        'Time Out': r.timeOut ? new Date(r.timeOut).toLocaleString() : '',
+        'Hours': r.hours ?? '',
+        'Points': r.pointsAwarded ?? 0,
+        'Description': r.description ?? '',
+      }));
+
+      const autoCols = (rows: Record<string, unknown>[]) =>
+        Object.keys(rows[0] ?? {}).map(k => ({
+          wch: Math.max(k.length, ...rows.map(r => String(r[k] ?? '').length)) + 2,
+        }));
+
+      const wb = XLSX.utils.book_new();
+
+      const breakdownWs = XLSX.utils.json_to_sheet(breakdownRows);
+      if (breakdownRows.length) breakdownWs['!cols'] = autoCols(breakdownRows);
+      XLSX.utils.book_append_sheet(wb, breakdownWs, 'Breakdown');
+
+      const recordsWs = XLSX.utils.json_to_sheet(recordRows);
+      if (recordRows.length) recordsWs['!cols'] = autoCols(recordRows);
+      XLSX.utils.book_append_sheet(wb, recordsWs, 'Records');
+
+      XLSX.writeFile(wb, `${this.displayName} - Dashboard.xlsx`);
+    } catch (err) {
+      console.error('Excel export failed', err);
+      this.snack.open('Export failed. Please try again.', 'Close', { duration: 3500 });
+    }
   }
 
   getTabIcon(tab: Tab): string {
