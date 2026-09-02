@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import * as XLSX from 'xlsx';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -18,6 +17,7 @@ import {
 } from '../../../core/services/attendance.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { ThemeService } from '../../../core/theme/theme.service';
+import { exportAttendanceExcel } from '../../../shared/utils/export-attendance-excel';
 
 type Tab = 'Hours' | 'Points' | 'Attendance';
 
@@ -426,44 +426,7 @@ export class DashboardComponent implements OnInit {
       return;
     }
     try {
-      const breakdownRows = (this.summary?.departmentBreakdown ?? []).flatMap(dept =>
-        dept.subcategories.map(sub => ({
-          'Department': dept.name,
-          'Subcategory': sub.name,
-          'Hours': sub.hours,
-          'Hours Limit': sub.hoursLimit ?? '',
-          'Points': sub.points,
-          'Points Limit': sub.pointsLimit ?? '',
-        })),
-      );
-
-      const recordRows = this.attendance.map(r => ({
-        'Event Name': r.eventName ?? '',
-        'Department': r.eventDepartment ?? '',
-        'Category': r.eventCategory ?? '',
-        'Time In': r.timeIn ? new Date(r.timeIn).toLocaleString() : '',
-        'Time Out': r.timeOut ? new Date(r.timeOut).toLocaleString() : '',
-        'Hours': r.hours ?? '',
-        'Points': r.pointsAwarded ?? 0,
-        'Description': r.description ?? '',
-      }));
-
-      const autoCols = (rows: Record<string, unknown>[]) =>
-        Object.keys(rows[0] ?? {}).map(k => ({
-          wch: Math.max(k.length, ...rows.map(r => String(r[k] ?? '').length)) + 2,
-        }));
-
-      const wb = XLSX.utils.book_new();
-
-      const breakdownWs = XLSX.utils.json_to_sheet(breakdownRows);
-      if (breakdownRows.length) breakdownWs['!cols'] = autoCols(breakdownRows);
-      XLSX.utils.book_append_sheet(wb, breakdownWs, 'Breakdown');
-
-      const recordsWs = XLSX.utils.json_to_sheet(recordRows);
-      if (recordRows.length) recordsWs['!cols'] = autoCols(recordRows);
-      XLSX.utils.book_append_sheet(wb, recordsWs, 'Records');
-
-      XLSX.writeFile(wb, `${this.displayName} - Dashboard.xlsx`);
+      exportAttendanceExcel(this.summary, this.attendance, this.displayName);
     } catch (err) {
       console.error('Excel export failed', err);
       this.snack.open('Export failed. Please try again.', 'Close', { duration: 3500 });

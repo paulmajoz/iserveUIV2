@@ -1,27 +1,34 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { EventsService, SchoolContact } from '../../../core/services/events.service';
+import { AttendanceService, IAttendance, AttendanceSummary } from '../../../core/services/attendance.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
+import { HoursFormatPipe } from '../../pipes/hours-format.pipe';
+import { exportAttendanceExcel } from '../../utils/export-attendance-excel';
 
-type Mode = 'search' | 'preview';
+type Mode = 'search' | 'loading' | 'list';
 
 /**
  * Teacher-facing "look up a student's dashboard" dialog.
  *
  *  • Type-ahead search over school contacts (students only), with a
  *    free-form email fallback for students not yet in the contact list.
- *  • On selection, switches (in place — no second dialog) to a
- *    phone-width preview of the real /student/dashboard page, since that
- *    page's UI is mobile-first and would look wrong as a full desktop view.
+ *  • On selection, fetches that student's attendance directly (same data
+ *    the real dashboard uses) and shows it as a flat, scannable list —
+ *    simpler than embedding the mobile-first dashboard page itself.
+ *  • "Export to Excel" reuses the exact same workbook builder as the
+ *    student's own dashboard export button.
  */
 @Component({
   selector: 'app-student-dashboard-dialog',
@@ -35,10 +42,12 @@ type Mode = 'search' | 'preview';
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     MatAutocompleteModule,
+    HoursFormatPipe,
   ],
   template: `
-    <ng-container *ngIf="mode === 'search'; else preview">
+    <ng-container *ngIf="mode === 'search'">
       <h2 mat-dialog-title class="!text-base !font-bold">View Student Dashboard</h2>
 
       <mat-dialog-content class="!pt-1 !pb-0">
@@ -86,28 +95,62 @@ type Mode = 'search' | 'preview';
       </mat-dialog-actions>
     </ng-container>
 
-    <ng-template #preview>
-      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+    <ng-container *ngIf="mode === 'loading'">
+      <div class="flex flex-col items-center justify-center gap-3 py-16">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p class="text-sm text-gray-500">Loading {{ selectedEmail }}…</p>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="mode === 'list'">
+      <div class="flex items-center justify-between px-6 pt-5 pb-3">
         <div class="min-w-0">
           <p class="text-sm font-bold text-gray-900 truncate">{{ selectedName || selectedEmail }}</p>
           <p *ngIf="selectedName" class="text-xs text-gray-500 truncate">{{ selectedEmail }}</p>
         </div>
-        <div class="flex items-center gap-1 shrink-0">
-          <a [href]="rawUrl" target="_blank" rel="noopener" class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 mr-1">
-            Open in new tab <mat-icon style="font-size:14px;width:14px;height:14px;">open_in_new</mat-icon>
-          </a>
-          <button mat-icon-button (click)="dialogRef.close()" aria-label="Close">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
+        <button mat-icon-button (click)="dialogRef.close()" aria-label="Close">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
 
-      <div class="flex justify-center bg-gray-100 p-4">
-        <iframe [src]="safeUrl"
-                style="width:390px;max-width:100%;height:730px;border:none;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.15);background:#fff;">
-        </iframe>
-      </div>
-    </ng-template>
+      <mat-dialog-content class="!pt-0">
+        <div class="flex gap-4 mb-3 text-sm">
+          <div><span class="font-bold" style="color:var(--color-primary)">{{ totalHours | hoursFormat }}</span> hours</div>
+          <div><span class="font-bold" style="color:var(--color-secondary)">{{ totalPoints }}</span> points</div>
+          <div class="text-gray-400">{{ attendance.length }} {{ attendance.length === 1 ? 'entry' : 'entries' }}</div>
+        </div>
+
+        <div *ngIf="attendance.length === 0" class="text-sm text-gray-500 py-4 text-center">
+          No entries yet for this student.
+        </div>
+
+        <div class="max-h-96 overflow-y-auto -mx-1 px-1">
+          <div *ngFor="let rec of attendance"
+               class="flex items-start justify-between gap-3 py-2.5 border-b border-gray-50 last:border-b-0">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 truncate">{{ rec.eventName || 'Event' }}</p>
+              <p class="text-xs text-gray-500 truncate">
+                <span *ngIf="rec.eventDepartment">{{ rec.eventDepartment }}</span>
+                <span *ngIf="rec.eventCategory"> · {{ rec.eventCategory }}</span>
+                <span> · {{ rec.timeIn | date:'mediumDate' }}</span>
+              </p>
+            </div>
+            <div class="text-right shrink-0">
+              <p *ngIf="rec.hours" class="text-sm font-bold" style="color:var(--color-primary)">{{ rec.hours | hoursFormat }}</p>
+              <p *ngIf="rec.pointsAwarded" class="text-sm font-bold" style="color:var(--color-secondary)">+{{ rec.pointsAwarded }}</p>
+            </div>
+          </div>
+        </div>
+      </mat-dialog-content>
+
+      <mat-dialog-actions align="end" class="!px-6 !pb-4 !pt-3">
+        <button mat-button type="button" (click)="backToSearch()">Search another</button>
+        <button mat-flat-button type="button" (click)="exportToExcel()" [disabled]="attendance.length === 0">
+          <mat-icon>download</mat-icon>
+          Export to Excel
+        </button>
+      </mat-dialog-actions>
+    </ng-container>
   `,
 })
 export class StudentDashboardDialogComponent implements OnInit {
@@ -120,14 +163,15 @@ export class StudentDashboardDialogComponent implements OnInit {
 
   selectedEmail = '';
   selectedName = '';
-  safeUrl: SafeResourceUrl = '';
-  rawUrl = '';
+  attendance: IAttendance[] = [];
+  summary: AttendanceSummary | null = null;
 
   constructor(
     public dialogRef: MatDialogRef<StudentDashboardDialogComponent>,
     private events: EventsService,
+    private attendanceService: AttendanceService,
     private ctx: UrlContextService,
-    private sanitizer: DomSanitizer,
+    private snack: MatSnackBar,
   ) {}
 
   ngOnInit() {
@@ -151,10 +195,18 @@ export class StudentDashboardDialogComponent implements OnInit {
       .slice(0, 50);
   }
 
+  get totalHours(): number {
+    return this.attendance.reduce((s, r) => s + (r.hours ?? 0), 0);
+  }
+
+  get totalPoints(): number {
+    return this.attendance.reduce((s, r) => s + (r.pointsAwarded ?? 0), 0);
+  }
+
   onSelect(event: MatAutocompleteSelectedEvent) {
     const email = event.option.value as string;
     const match = this.contacts.find((c) => c.email === email);
-    this.openPreview(email, match?.name);
+    this.loadStudent(email, match?.name);
   }
 
   /** Enter pressed with no autocomplete option chosen — try the typed value as a free email. */
@@ -163,24 +215,53 @@ export class StudentDashboardDialogComponent implements OnInit {
     if (!raw) return;
     const match = this.contacts.find((c) => c.email.toLowerCase() === raw.toLowerCase());
     if (match) {
-      this.openPreview(match.email, match.name);
+      this.loadStudent(match.email, match.name);
       return;
     }
     if (!this.isValidEmail(raw)) {
       this.errorMsg = `"${raw}" doesn't look like a valid email.`;
       return;
     }
-    this.openPreview(raw.toLowerCase());
+    this.loadStudent(raw.toLowerCase());
   }
 
-  private openPreview(email: string, name?: string) {
+  backToSearch() {
+    this.mode = 'search';
+    this.attendance = [];
+    this.summary = null;
+  }
+
+  exportToExcel() {
+    try {
+      exportAttendanceExcel(this.summary, this.attendance, this.selectedName || this.selectedEmail);
+    } catch (err) {
+      console.error('Excel export failed', err);
+      this.snack.open('Export failed. Please try again.', 'Close', { duration: 3500 });
+    }
+  }
+
+  private loadStudent(email: string, name?: string) {
     this.errorMsg = '';
     this.selectedEmail = email;
     this.selectedName = name ?? '';
+    this.mode = 'loading';
     const schoolId = this.ctx.schoolId;
-    this.rawUrl = `/student/dashboard?email=${encodeURIComponent(email)}&schoolId=${schoolId}`;
-    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.rawUrl);
-    this.mode = 'preview';
+
+    forkJoin({
+      attendance: this.attendanceService.getByStudent(email),
+      summary: this.attendanceService.getSummary(email, schoolId).pipe(catchError(() => of(null))),
+    }).subscribe({
+      next: ({ attendance, summary }) => {
+        this.attendance = attendance.sort((a, b) =>
+          (b.timeIn?.toString() ?? '').localeCompare(a.timeIn?.toString() ?? ''));
+        this.summary = summary;
+        this.mode = 'list';
+      },
+      error: (err) => {
+        this.errorMsg = err?.error?.message ?? err?.message ?? 'Could not load this student.';
+        this.mode = 'search';
+      },
+    });
   }
 
   private isValidEmail(s: string): boolean {
