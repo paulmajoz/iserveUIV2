@@ -8,8 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { QrScannerComponent, ScannedPayload } from '../../../shared/components/qr-scanner/qr-scanner.component';
-import { EventsService, IEvent } from '../../../core/services/events.service';
-import { AttendanceService, IAttendance, SubmitAttendancePayload } from '../../../core/services/attendance.service';
+import { EventsService, IEvent, LegacyEvent } from '../../../core/services/events.service';
+import { AttendanceService, IAttendance, SubmitAttendancePayload, LegacyAttendanceRecord } from '../../../core/services/attendance.service';
 import { UrlContextService } from '../../../core/services/url-context.service';
 import { ThemeService } from '../../../core/theme/theme.service';
 
@@ -214,7 +214,7 @@ type View = 'idle' | 'scanning' | 'resolving' | 'confirming' | 'submitting' | 's
                 <span class="text-gray-500">Hours logged</span>
                 <span class="font-semibold">{{ formatHours(completedRecord.hours) }}</span>
               </div>
-              <div *ngIf="completedRecord.pointsAwarded > 0" class="flex justify-between">
+              <div *ngIf="(completedRecord.pointsAwarded ?? 0) > 0" class="flex justify-between">
                 <span class="text-gray-500">Points awarded</span>
                 <span class="font-semibold" style="color: var(--color-primary)">
                   +{{ completedRecord.pointsAwarded }}
@@ -265,9 +265,13 @@ export class ScanComponent implements OnInit {
   view: View = 'idle';
   event?: IEvent;
   resolvedDirection: 'in' | 'out' = 'in';
-  completedRecord?: IAttendance;
+  completedRecord?: IAttendance | LegacyAttendanceRecord;
   errorMsg = '';
   studentName = '';
+
+  /** True when the scanned/landed-on event lives in the old V1 `events` collection. */
+  isLegacyEvent = false;
+  private legacyEventType?: 'IN/OUT' | 'VOLUME' | 'IN ONLY';
 
   // Optional info form (description / reflection / volume / geolocation)
   optionalForm!: FormGroup;
@@ -319,15 +323,75 @@ export class ScanComponent implements OnInit {
     this.view = 'resolving';
     this.events.getEventById(eventId).subscribe({
       next: (event) => {
+        this.isLegacyEvent = false;
         this.event = event;
         this.applyValidators(event);
         this.resolveDirection(event, hintedDirection);
+      },
+      error: (err) => {
+        // Not a v2events event — this ID may belong to an old, un-migrated
+        // V1 event (printed QR codes from before the V2 rollout).
+        if (err?.status === 404) {
+          this.loadLegacyEventAndResolve(eventId, hintedDirection);
+          return;
+        }
+        this.errorMsg = err?.error?.message ?? err?.message ?? 'Could not load this event.';
+        this.view = 'error';
+      },
+    });
+  }
+
+  private loadLegacyEventAndResolve(eventId: string, hintedDirection?: 'in' | 'out') {
+    this.events.getLegacyEventById(eventId).subscribe({
+      next: (legacyEvent) => {
+        this.isLegacyEvent = true;
+        this.legacyEventType = legacyEvent.eventType;
+        const event = this.mapLegacyEvent(legacyEvent);
+        this.event = event;
+        this.applyValidators(event);
+        // V1 printed QR codes always encode ?direction=..., so hintedDirection
+        // is nearly always present here. There's no V1 equivalent of
+        // attendance/state to auto-detect from, so default to 'in' as a
+        // last-resort fallback for a malformed/hand-typed URL.
+        this.resolveDirection(event, hintedDirection ?? 'in');
       },
       error: (err) => {
         this.errorMsg = err?.error?.message ?? err?.message ?? 'Could not load this event.';
         this.view = 'error';
       },
     });
+  }
+
+  /** Adapts a V1 event into the shape the rest of this component already understands. */
+  private mapLegacyEvent(v1: LegacyEvent): IEvent {
+    return {
+      _id: v1.id,
+      eventName: v1.eventName,
+      school: v1.school,
+      teacher: v1.teacher,
+      teacherEmail: v1.teacherEmail,
+      department: v1.eventCategory,
+      category: v1.eventCategory,
+      qrMode: v1.eventType === 'IN ONLY' ? 'once-off' : 'in-out',
+      hourMode: v1.eventType === 'VOLUME' ? 'volume' : v1.eventType === 'IN/OUT' ? 'in-out' : 'fixed',
+      fixedHours: 1,
+      volumeUnitName: v1.customUnitName,
+      volumeConversion: v1.unitToHourConversion ?? 1,
+      pointsMode: 'disabled', // V1 has no points system at all
+      pointsValue: 0,
+      pointsConversion: 1,
+      pointsEnabled: false,
+      captureOptions: {
+        hasGeolocate: v1.hasGeolocate ?? false,
+        hasDescription: v1.hasDescription ?? false,
+        hasReflection: v1.hasReflection ?? false,
+      },
+      geoTarget: null, // V1 has no geofencing concept — never validated, just captured
+      qrCodeIn: v1.qrCodeIn,
+      qrCodeOut: v1.qrCodeOut,
+      isActive: true,
+      createdAt: '',
+    };
   }
 
   /** True when at least one of hours/points uses volume mode and needs a unit count */
@@ -416,6 +480,13 @@ export class ScanComponent implements OnInit {
       return;
     }
 
+    if (this.isLegacyEvent) {
+      // No V1 equivalent of attendance/state — reaching here means a
+      // malformed/hand-typed URL with no ?direction=. Default to 'in'.
+      this.proceed(event, 'in');
+      return;
+    }
+
     this.attendance.getState(event._id, c.email).subscribe({
       next: (state) => {
         if (state.status === 'closed') {
@@ -452,6 +523,11 @@ export class ScanComponent implements OnInit {
   }
 
   private submit(event: IEvent, direction: 'in' | 'out') {
+    if (this.isLegacyEvent) {
+      this.submitLegacyRecord(event, direction);
+      return;
+    }
+
     const c = this.ctx.context!;
     this.view = 'submitting';
     const v = this.optionalForm.value;
@@ -491,6 +567,46 @@ export class ScanComponent implements OnInit {
       error: (err) => {
         const msg: string = err?.error?.message ?? err?.message ?? 'Submission failed.';
         if (msg.toLowerCase().includes('already')) {
+          this.view = 'already-recorded';
+        } else {
+          this.errorMsg = msg;
+          this.view = 'error';
+        }
+      },
+    });
+  }
+
+  private submitLegacyRecord(event: IEvent, direction: 'in' | 'out') {
+    const c = this.ctx.context!;
+    this.view = 'submitting';
+    const v = this.optionalForm.value;
+
+    const payload = {
+      eventId: event._id,
+      studentEmail: c.email,
+      direction,
+      eventType: this.legacyEventType,
+      ...(direction === 'in' ? {
+        studentFirstName: c.firstName || undefined,
+        studentLastName:  c.lastName  || undefined,
+      } : {}),
+      ...(this.needsConfirmStep(direction) ? {
+        description: v.description || undefined,
+        reflection:  v.reflection  || undefined,
+        unitAmount:  v.unitAmount  ?? undefined,
+        ...(direction === 'in'  ? { locationIn:  v.geolocation || undefined } : {}),
+        ...(direction === 'out' ? { locationOut: v.geolocation || undefined } : {}),
+      } : {}),
+    };
+
+    this.attendance.submitLegacy(payload).subscribe({
+      next: (record) => {
+        this.completedRecord = record;
+        this.view = 'success';
+      },
+      error: (err) => {
+        const msg: string = err?.error?.message ?? err?.message ?? 'Submission failed.';
+        if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('no check-in')) {
           this.view = 'already-recorded';
         } else {
           this.errorMsg = msg;

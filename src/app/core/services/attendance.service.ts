@@ -132,6 +132,40 @@ export interface SubmitAttendancePayload {
   teacherEmail?: string;
 }
 
+export interface SubmitLegacyAttendancePayload {
+  eventId: string;
+  studentEmail: string;
+  direction: 'in' | 'out';
+  studentFirstName?: string;
+  studentLastName?: string;
+  eventType?: 'IN/OUT' | 'VOLUME' | 'IN ONLY';
+  locationIn?: string;
+  locationOut?: string;
+  unitAmount?: number;
+  description?: string;
+  reflection?: string;
+}
+
+/** A record from the old V1 `attendances` collection, returned by the legacy submit endpoint. */
+export interface LegacyAttendanceRecord {
+  _id: string;
+  eventId: string;
+  studentEmail: string;
+  studentFirstName?: string;
+  studentLastName?: string;
+  timeIn: string;
+  timeOut?: string;
+  locationIn?: string;
+  locationOut?: string;
+  unitAmount?: number;
+  eventType?: string;
+  description?: string;
+  reflection?: string;
+  hours?: number | null;
+  /** V1 has no points system — always absent. Kept optional so the shared success view stays type-safe. */
+  pointsAwarded?: number;
+}
+
 export interface UpdateAttendancePayload {
   timeIn?: string;
   timeOut?: string;
@@ -153,6 +187,11 @@ export class AttendanceService {
 
   submit(payload: SubmitAttendancePayload): Observable<IAttendance> {
     return this.api.post<IAttendance>('attendance/submit', payload);
+  }
+
+  /** Submits attendance for an event that lives in the old V1 `events` collection. */
+  submitLegacy(payload: SubmitLegacyAttendancePayload): Observable<LegacyAttendanceRecord> {
+    return this.api.post<LegacyAttendanceRecord>('legacy/attendance/submit', payload);
   }
 
   assistedScan(payload: SubmitAttendancePayload): Observable<IAttendance> {

@@ -72,6 +72,11 @@ export class EventsService {
     return this.api.get<IEvent>(`events/${id}`);
   }
 
+  /** Resolves an event that lives in the old V1 `events` collection (pre-migration schools). */
+  getLegacyEventById(id: string): Observable<LegacyEvent> {
+    return this.api.get<LegacyEvent>(`legacy/events/${id}`);
+  }
+
   getEventsByPerson(schoolId: number, email: string, role: string): Observable<IEvent[]> {
     return this.api.get<IEvent[]>('events/by-person', { schoolId, email, role });
   }
@@ -116,4 +121,23 @@ export interface SchoolContact {
   role: 'Staff' | 'Student';
   grade?: string;
   studentClass?: string;
+}
+
+/** An event from the old V1 `events` collection, surfaced via the legacy proxy endpoint. */
+export interface LegacyEvent {
+  id: string;
+  eventName: string;
+  eventType: 'IN/OUT' | 'VOLUME' | 'IN ONLY';
+  eventCategory: string;
+  hasGeolocate: boolean;
+  hasDescription: boolean;
+  hasReflection: boolean;
+  customUnitName?: string;
+  unitToHourConversion?: number;
+  teacher: string;
+  teacherEmail: string;
+  school: string;
+  qrCodeIn?: string;
+  qrCodeOut?: string;
+  legacy?: true;
 }
